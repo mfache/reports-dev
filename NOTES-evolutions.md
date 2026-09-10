@@ -423,3 +423,44 @@ dû être unifiés depuis longtemps.
 
 Suppression de `test_api_mqtt.py` (script de debug de 2 lignes,
 `import api` devenu sans objet, plus aucune valeur).
+
+## 10 septembre 2026 (soir, suite) — « Utilisateur introuvable » sur /reports-dev
+
+### Symptôme
+
+Après connexion Google réussie sur `/reports-dev/`, page blanche avec le
+seul texte « Utilisateur introuvable. »
+
+### Cause
+
+`dt_dev` a été créée via `mysqldump --no-data` (structure seule, aucune
+donnée réelle copiée — choix délibéré pour ne jamais exposer de vraies
+données clients/personnel dans un environnement de dev moins protégé).
+`ui.py::reports_root()` cherche par défaut `utilisateurs WHERE id = 1`
+(paramètre `uid` absent de l'URL) : la table est vide dans `dt_dev`, la
+route retourne donc explicitement « Utilisateur introuvable. » —
+comportement de l'application, pas un bug de la refonte.
+
+**Note** : `chantiers` et `boitier_registre` sont également vides dans
+`dt_dev` (structure seule) — attendu, l'accueil affichera une liste de
+chantiers vide tant qu'aucune donnée de test n'y est insérée.
+
+### Fix
+
+Un utilisateur de dev synthétique (pas une copie d'un vrai compte) a été
+inséré dans `dt_dev.utilisateurs` :
+
+```sql
+INSERT INTO dt_dev.utilisateurs (id, ref, nom, cas, adm)
+VALUES (1, 'dev', 'Utilisateur Dev', 1, 1);
+```
+
+Vérifié par appel WSGI direct (`sudo -u mariadb`) : `GET /reports-dev/`
+renvoie `200`, contient « Utilisateur Dev », ne contient plus
+« Utilisateur introuvable ». Prod non touchée (aucune action sur `dt`).
+
+### Pour la suite
+
+Si des tests plus poussés de l'UI de dev nécessitent des chantiers/boîtiers
+de test, insérer des données synthétiques équivalentes dans `dt_dev`
+(jamais copier de vraies lignes depuis `dt`).
