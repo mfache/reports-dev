@@ -696,6 +696,8 @@ Portage du moteur de template de `rpinode` (rpi01) vers `reports`.
 - **Bouton de déconnexion** : Ajout d'un bouton "Déconnexion" dans le header, branché sur `/oauth2-google/sign_out`. Il redirige automatiquement vers l'accueil de l'environnement actuel après déconnexion.
 - **Migration de domaine (Tailscale -> Headscale)** : Remplacement de toutes les références à l'ancien domaine `tailb49c55.ts.net` par le nouveau domaine `dt.net` dans les tables MariaDB (`boitier_registre`). Migration appliquée sur `dt` (prod) et `dt_dev` (dev).
 - **Uniformisation du nom de société** : Remplacement de toutes les occurrences de « Delta Thermic » par « Deltathermic » dans le code, les templates et les fichiers de configuration (manifest, README).
+- **Nouveaux rôles utilisateurs (WRK & ROT)** : Ajout des niveaux d'accès `wrk` (Ouvriers) et `rot` (Superuser) dans la table `utilisateurs`. Mise à jour du moteur de rendu et du filtrage de la navigation latérale. Marc (ID 1) est promu `rot=1`.
+- **Détection Client** : Implémentation d'une détection automatique du type de terminal (smartphone vs station) et de la résolution d'écran, accessible dans les templates via la variable `client`.
 
 ### Refonte graphique complète (Design System « Kinetic Infrastructure »)
 Portage de l'identité visuelle de `rpinode` (rpi01) vers le serveur central.
