@@ -251,3 +251,67 @@ pendant l'opération.
 l'authentification ou le point d'entrée WSGI de `reports`, tester le
 parcours complet en navigateur réel (pas seulement `curl`), y compris le
 comportement d'arrière-plan d'une PWA déjà installée (Service Worker).**
+
+## 10 septembre 2026 (après-midi) — Mise en place de l'interface de dev `/reports-dev`
+
+Première étape concrète de la refonte décrite dans
+`CAHIER-DES-CHARGES-REFONTE.md` (§11) : une interface de dev tourne
+désormais en permanence à côté de la prod, sans aucune coupure ni
+modification du code de production.
+
+### Mis en place
+
+- Copie de travail Git dans `/opt/reports-dev` (dépôt local, distinct de
+  `docs-infra`), destinée à devenir l'environnement de dev permanent de
+  la refonte plutôt qu'un simple répertoire jetable.
+- Venv dédié `/opt/venv/reports-dev` (mêmes versions que la prod :
+  bottle 0.13.1, PyMySQL 1.0.2, paho-mqtt 2.1.0) — `python3-venv` a dû
+  être installé au préalable (absent du système).
+- Base MariaDB séparée `dt_dev` (structure copiée de `dt` via
+  `mysqldump --no-data`, aucune donnée réelle), utilisateur dédié
+  `boitier_app_dev` à droits limités à `dt_dev`, secrets dans
+  `/etc/boitier-fleet/db-dev.env` (mot de passe généré, distinct de la
+  prod ; `FLEET_JOIN_SECRET` dev également distinct pour qu'aucun
+  boîtier réel ne puisse s'enregistrer dessus par erreur).
+- `app.py` et `db.py` (copie dev uniquement) lisent désormais
+  `REPORTS_BASE_PATH` et `DB_ENV_FILE` depuis l'environnement, avec les
+  mêmes valeurs par défaut qu'avant (`/reports`, `/etc/boitier-fleet/db.env`)
+  — la prod n'est donc pas impactée.
+- Nouvelle app uwsgi indépendante `reports-dev`
+  (`/etc/uwsgi/apps-enabled/reports-dev.ini`, socket
+  `/tmp/uwsgi.reports-dev.socket`, PID dans
+  `/run/uwsgi/app/reports-dev/pid`), démarrée manuellement via
+  `start-stop-daemon` (même mécanisme que celui utilisé par
+  `/etc/init.d/uwsgi`, mais ciblé sur cette seule app, jamais
+  `service uwsgi start/restart`) pour ne prendre aucun risque sur
+  `reports` ni `headscale-admin`, déjà en cours d'exécution.
+- Blocs nginx symétriques à ceux de `/reports` pour `/reports-dev`
+  (même `auth_request` Google, mêmes exemptions PWA `sw.js`/`manifest.json`,
+  même route SSE), ajoutés après sauvegarde horodatée
+  (`docs.deltathermic.be.bak_20260910_122528_ajout_reports_dev`) et
+  validés par `nginx -t` avant `systemctl reload nginx`.
+- Bandeau visuel orange dans `layout.tpl` (copie dev uniquement),
+  affiché sur toutes les pages servies sous `/reports-dev`.
+
+### Vérifié
+
+- PID des processus `reports` (prod) strictement inchangés avant/après
+  toute l'opération ; `/reports/api/usage` toujours `200` à la fin.
+- `/reports-dev/` redirige vers l'authentification Google comme
+  `/reports/` ; `/reports-dev/api/usage` répond sans authentification
+  (même politique que la prod, destinée aux boîtiers de test) ;
+  `/reports-dev/sw.js` exempté comme prévu.
+
+### Connu, non traité
+
+- Certains chemins statiques du template (`layout.tpl`) restent en dur
+  sur `/reports/static/...`, `/reports/manifest.json` : sans impact
+  fonctionnel ou de sécurité (contenu public identique des deux côtés),
+  mais à corriger lors du découpage en `core/paths.py` prévu par le
+  cahier des charges.
+- `python3-venv` n'était pas installé sur le serveur avant cette
+  intervention ; `apt-get install` a signalé des redémarrages de services
+  système différés (dbus, getty, networkd-dispatcher, logind,
+  unattended-upgrades) sans rapport avec `reports` — non traités
+  volontairement pour ne pas risquer d'impacter la prod hors périmètre
+  de cette tâche.
