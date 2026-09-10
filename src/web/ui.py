@@ -102,7 +102,7 @@ def serve_manifest():
             with open(STATIC_DIR / "manifest.json", "r") as f:
                 data = json.load(f)
             data["start_url"] = start
-            data["name"] = "Graphique Delta Thermic"
+            data["name"] = "Graphique Deltathermic"
             data["short_name"] = "DT Graph"
             response.content_type = "application/manifest+json"
             return json.dumps(data)
@@ -159,7 +159,7 @@ def reports_root():
         db.close()
 
     return view('home',
-                title='Chantiers - Delta Thermic',
+                title='Chantiers - Deltathermic',
                 current_user=current_user,
                 recent_chantiers=recent_chantiers,
                 my_chantiers=my_chantiers,
@@ -382,7 +382,7 @@ def chantier_details(chantier_id):
         manifest_url = f"{BASE_PATH}/manifest.json?start={encoded_start}"
 
     return view('chantier',
-                title=f"Chantier {chantier['ref']} - Delta Thermic",
+                title=f"Chantier {chantier['ref']} - Deltathermic",
                 chantier=chantier,
                 boitiers=boitiers,
                 bacnet_aliases=bacnet_aliases,
@@ -509,7 +509,7 @@ def nodes_view():
         db.close()
 
     return view('nodes',
-                title='Nodes - Delta Thermic',
+                title='Nodes - Deltathermic',
                 boitiers=boitiers,
                 trends_count=trends_count,
                 config_count=config_count,

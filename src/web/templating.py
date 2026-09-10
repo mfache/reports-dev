@@ -156,7 +156,7 @@ class TemplateEngine:
 
         # 3. Si HTMX, on renvoie juste le cœur (avec le titre pour l'onglet)
         if bottle.request.headers.get('HX-Request') == 'true':
-            title = kwargs.get('title', 'Delta Thermic')
+            title = kwargs.get('title', 'Deltathermic')
             return f"<title>{title}</title>\n{content}"
 
         # 4. Sinon, on emboîte dans la grande poupée (Layout)

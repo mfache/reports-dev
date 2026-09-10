@@ -693,8 +693,17 @@ Portage du moteur de template de `rpinode` (rpi01) vers `reports`.
     - Permet de lier plusieurs adresses email à un même utilisateur (support des alias).
     - Initialisée avec `marc@fache.be` lié à l'ID 1 (Marc Fache).
     - Migration enregistrée dans `tools/migrations/20260910_add_user_emails.py`.
-- **Auto-enregistrement des nouveaux utilisateurs** : Si un email authentifié via OAuth2 n'est pas reconnu en base, un compte est automatiquement créé avec le statut "En attente" (`cas=0`, `adm=0`). La référence (`ref`) est générée avec le préfixe `WAIT_` suivi d'un hash court pour garantir l'unicité.
 - **Bouton de déconnexion** : Ajout d'un bouton "Déconnexion" dans le header, branché sur `/oauth2-google/sign_out`. Il redirige automatiquement vers l'accueil de l'environnement actuel après déconnexion.
+- **Migration de domaine (Tailscale -> Headscale)** : Remplacement de toutes les références à l'ancien domaine `tailb49c55.ts.net` par le nouveau domaine `dt.net` dans les tables MariaDB (`boitier_registre`). Migration appliquée sur `dt` (prod) et `dt_dev` (dev).
+- **Uniformisation du nom de société** : Remplacement de toutes les occurrences de « Delta Thermic » par « Deltathermic » dans le code, les templates et les fichiers de configuration (manifest, README).
+
+### Refonte graphique complète (Design System « Kinetic Infrastructure »)
+Portage de l'identité visuelle de `rpinode` (rpi01) vers le serveur central.
+- **Thème Sombre High-Tech** : Utilisation des variables de couleurs CSS de `rpi01` (fond #0e1416, accents Cyan LED #4cd7f6).
+- **Typographies & Iconographie** : Intégration des polices *Inter* (UI) et *JetBrains Mono* (Données) via Google Fonts, et des icônes *Material Symbols*.
+- **Architecture de Page** : Mise en place d'un layout standardisé avec Header fixe, Sidebar de navigation et zone de contenu principale par-dessus un dégradé radial subtil.
+- **Composants Réutilisables** : Mise à jour de tous les templates pour utiliser les classes standard : `card`, `data-table`, `stats-banner`, `btn-primary`.
+- **Graphiques Unifiés** : Adaptation de Chart.js pour correspondre au thème sombre (axes, grilles, tooltips et palettes de couleurs luminescentes).
 
 ### Problèmes rencontrés et résolus lors de cette phase
 

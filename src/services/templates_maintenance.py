@@ -168,7 +168,7 @@ def templates_maintenance_view():
 
     templates_data_json = json.dumps(templates_by_uuid, default=str)
     return view('templates_maintenance',
-                title='Maintenance des Templates - Delta Thermic',
+                title='Maintenance des Templates - Deltathermic',
                 templates_data_json=templates_data_json,
                 current_user=current_user,
                 all_users=all_users,

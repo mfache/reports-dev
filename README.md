@@ -1,4 +1,4 @@
-# Projet `reports` — API de flotte et UI web (Delta Thermic)
+# Projet `reports` — API de flotte et UI web (Deltathermic)
 
 `reports` est le serveur central de la flotte de boîtiers de
 télémaintenance `rpinode` : réception des synchronisations, gestion des

@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0e1416">
-    <title>{{ get('title', 'Chantiers - Delta Thermic') }}</title>
+    <title>{{ get('title', 'Chantiers - Deltathermic') }}</title>
     
     <link rel="manifest" href="{{get('manifest_url', BASE_PATH + '/manifest.json')}}">
     <link rel="apple-touch-icon" href="{{BASE_PATH}}/static/dticon.png">
@@ -69,8 +69,7 @@
         <div class="header-content">
             <div class="header-left">
                 <a href="{{BASE_PATH}}/" class="brand-link">
-                    <!-- On réutilise le style du texte si l'image manque, mais ici on vise le logo Deltathermic -->
-                    <span style="color: #ef4444; font-weight: 300; font-size: 1.5rem; letter-spacing: 1px;">DELTA</span><span style="color: #dee3e6; font-weight: 600; font-size: 1.5rem; letter-spacing: 1px;">THERMIC</span>
+                    <img src="{{BASE_PATH}}/static/DELTA-Thermic-v3_reverse.png" alt="Deltathermic" class="brand-logo">
                 </a>
                 
                 <div class="header-divider"></div>
@@ -164,7 +163,7 @@
             </ul>
             
             <div style="margin-top: auto; padding: 20px; font-size: 0.7rem; color: var(--outline); text-align: center;">
-                Delta Thermic &copy; 2026<br>Infrastructure Reports
+                Deltathermic &copy; 2026<br>Infrastructure Reports
             </div>
         </nav>
 

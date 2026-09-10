@@ -3,7 +3,7 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <title>Graphique {{chantier['ref']}} - Delta Thermic</title>
+    <title>Graphique {{chantier['ref']}} - Deltathermic</title>
     <link rel="manifest" href="{{manifest_url}}">
     <meta name="theme-color" content="#0e1416">
     <link rel="apple-touch-icon" href="{{BASE_PATH}}/static/dticon.png">
