@@ -166,15 +166,20 @@ Constats :
 
 ## 6. Architecture cible proposée
 
-**Etat au 10 septembre 2026 (soir)** : `core/` et l'éclatement d'`api.py`
-sont faits dans `/opt/reports-dev` (voir NOTES-evolutions.md). Nuance par
-rapport au tableau ci-dessous : les fichiers `services/*.py` issus
-d'`api.py` contiennent encore le routage Bottle (decorateurs `@api_app.get`/
-`post`) directement, pas seulement de la logique pure - voir la nuance
-assumee au §9. `web/api.py` existe deja mais sous une forme d'assemblage
-(routes transverses + import des modules `services/` pour effet de bord),
-pas encore le pur routeur qui delegue decrit ici. `ui.py` n'a pas encore
-été touche (`web/ui.py`, `web/stream.py` restent a faire).
+**Etat au 10 septembre 2026 (nuit)** : `core/`, l'éclatement d'`api.py`
+et l'éclatement d'`ui.py` sont faits dans `/opt/reports-dev` (voir
+NOTES-evolutions.md). Nuance par rapport au tableau ci-dessous : les
+fichiers `services/*.py` et `web/*.py` contiennent encore le routage
+Bottle (decorateurs `@api_app.get`/`post`, `@ui_app.get`/`post`)
+directement, pas seulement de la logique pure - voir la nuance assumee
+au §9. `web/api.py` et `web/ui.py` existent deja mais sous une forme
+d'assemblage (routes transverses + import des modules `services/`/`web/`
+pour effet de bord), pas encore le pur routeur qui delegue decrit ici.
+Contrairement au tableau ci-dessous, la majorite des pages reste dans
+`web/ui.py` : seuls `web/stream.py` (SSE) et
+`services/templates_maintenance.py` ont ete extraits, les autres routes
+restant trop couplees entre elles pour un decoupage plus fin sans filet
+de tests (memes raisons qu'au §9).
 
 ```
 reports/
@@ -314,9 +319,13 @@ reports/
       reecriture aussi profonde (voir NOTES-evolutions.md, entree du 10
       septembre soir, pour la justification complete). A reprendre une
       fois le point suivant (tests reels) atteint.
-- [ ] `ui.py` ne contient encore que du routage Bottle (pas de
-      logique métier ni de requêtes SQL directement dans les fonctions de
-      route) : pas encore fait (seul `api.py` a ete traite pour l'instant).
+- [x] `ui.py` (1169 lignes) est éclaté en `web/ui.py` (l'essentiel des
+      pages), `web/stream.py` (SSE) et `services/templates_maintenance.py`
+      (10 septembre 2026, nuit). **Même nuance assumée** que pour `api.py` :
+      routage et logique restent ensemble par route. Bug réel trouvé et
+      corrigé au passage : le bandeau visuel de dev (§11) ne s'affichait
+      jamais (`bottle.request.path` non fiable à travers un montage Bottle,
+      voir NOTES-evolutions.md).
 - [ ] `./run_tests.sh` exécute une suite réelle et couvre au moins : montage
       WSGI (`/reports` et `/reports/api` répondent), une route par service,
       l'exemption PWA de `sw.js`/`manifest.json`.
