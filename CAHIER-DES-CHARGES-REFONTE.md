@@ -336,15 +336,22 @@ reports/
 - [x] `./run.sh` refuse de recharger l'app si les tests échouent (vérifié
       manuellement avec un échec provoqué), et ne recharge jamais que le
       process de cette app (jamais `service uwsgi ...`).
-- [ ] Plus aucun fichier `*.bak_*` dans le dossier applicatif vivant :
-      l'historique est dans Git.
-- [ ] `README.md` permet à quelqu'un qui découvre le projet de comprendre
-      l'architecture, lancer les tests et déployer, sans lire le code.
+- [x] Plus aucun fichier `*.bak_*` dans `/opt/reports-dev` (copie de
+      travail Git). **Nuance** : `/var/www/reports` (prod) conserve encore
+      les siens jusqu'à la bascule (§7) — pas touchés volontairement pour
+      ne courir aucun risque avant que la copie de travail soit validée.
+- [x] `README.md` (11 septembre 2026) permet de comprendre l'architecture,
+      lancer les tests et redémarrer en sécurité, sans lire le code.
 - [ ] Toutes les URLs externes existantes répondent à l'identique
       (vérifié en navigateur réel, session OAuth incluse, PWA installée
-      incluse).
+      incluse). **Reste à faire par un humain** avant toute bascule en
+      production — tout ce qui a été vérifié jusqu'ici l'a été en WSGI
+      direct et via `curl`/nginx, jamais en navigateur reel avec une
+      session Google authentifiée (leçon de l'incident du 10 septembre).
 - [ ] `docs-infra` et `OPERATIONS.md` mis à jour après bascule en
-      production.
+      production. Tenus a jour tout au long de la refonte (chaque etape
+      commitee et poussee), mais le critere lui-meme ne sera coche
+      qu'apres la bascule reelle decrite au §7 (pas encore faite).
 
 ## 10. Risques identifiés
 
