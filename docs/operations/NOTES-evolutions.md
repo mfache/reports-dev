@@ -573,3 +573,39 @@ active et servie normalement pendant l'échec.
 - Garde-fou de `run.sh` testé en conditions réelles (échec volontaire
   provoqué puis retiré), `reports-dev` jamais interrompu pendant le test.
 - Prod non touchée.
+
+## 11 septembre 2026 (suite) — nettoyage final : migrations, templates/, docs/, README.md
+
+Dernier lot du §6 du cahier des charges côté organisation (le
+découpage logique/routage complet reste reporté, voir plus haut).
+
+- `sql_script.py`/`.sql`, `schema_update.sql` (migrations ponctuelles
+  déjà appliquées le 8 septembre : renommage
+  `boitier_annotations` -> `boitier_fabricants`) déplacées vers
+  `tools/migrations/`, datées et documentées.
+- `views/` renommé en `templates/` (cohérence de vocabulaire avec
+  `rpinode`) ; `core/paths.py` expose `TEMPLATES_DIR`.
+- Ce fichier (`NOTES-evolutions.md`) et `HEADSCALE-ACL.md` déplacés
+  vers `docs/operations/` et `docs/incidents/` — **même mouvement
+  appliqué en production** (déplacement de documentation pure, aucun
+  impact fonctionnel, vérifié par un appel a `/reports/api/usage`
+  immédiatement après).
+- `docs/README.md` et `tools/README.md` ajoutés (index, sur le modèle
+  `rpinode`).
+- `README.md` racine entièrement réécrit (était quasiment vide depuis
+  le début du projet) : architecture réelle, comment lancer les tests
+  et redémarrer en sécurité, description de l'interface de dev.
+
+### Vérifié
+
+- `./run.sh` complet (py_compile + 32/32 tests + rechargement ciblé)
+  après chaque changement.
+- PID de `reports` (prod) vérifiés inchangés.
+
+### État du cahier des charges après cette série de commits
+
+Tous les objectifs organisationnels du §4 sont atteints dans
+`/opt/reports-dev`, sauf la bascule en production elle-même (§7) qui
+reste à faire quand ce sera décidé, et la séparation complète
+logique/routage (reportée, voir plus haut et §9 du cahier des
+charges).
