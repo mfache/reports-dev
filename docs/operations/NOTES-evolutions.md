@@ -698,6 +698,7 @@ Portage du moteur de template de `rpinode` (rpi01) vers `reports`.
 - **Uniformisation du nom de société** : Remplacement de toutes les occurrences de « Delta Thermic » par « Deltathermic » dans le code, les templates et les fichiers de configuration (manifest, README).
 - **Nouveaux rôles utilisateurs (WRK & ROT)** : Ajout des niveaux d'accès `wrk` (Ouvriers) et `rot` (Superuser) dans la table `utilisateurs`. Mise à jour du moteur de rendu et du filtrage de la navigation latérale. Marc (ID 1) est promu `rot=1`.
 - **Détection Client** : Implémentation d'une détection automatique du type de terminal (smartphone vs station) et de la résolution d'écran, accessible dans les templates via la variable `client`.
+- **Restriction de l'Espace Dev** : L'accès au menu et à la page « Espace Dev » est désormais strictement réservé aux superusers (`rot=1`), tandis que les administrateurs classiques conservent l'accès aux templates.
 
 ### Refonte graphique complète (Design System « Kinetic Infrastructure »)
 Portage de l'identité visuelle de `rpinode` (rpi01) vers le serveur central.

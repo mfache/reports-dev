@@ -172,7 +172,12 @@ class TemplateEngine:
             template_name = 'pending_validation'
             kwargs['title'] = 'Accès en attente'
         
-        elif template_name in ('templates_maintenance', 'dev') and not current_user.get('is_admin'):
+        elif template_name == 'dev' and not current_user.get('is_root'):
+            # L'Espace Dev est strictement réservé aux superusers (rot=1)
+            template_name = '404'
+            kwargs['title'] = 'Accès refusé'
+        
+        elif template_name == 'templates_maintenance' and not current_user.get('is_admin'):
             template_name = '404'
             kwargs['title'] = 'Accès refusé'
 

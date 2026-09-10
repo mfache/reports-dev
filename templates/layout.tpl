@@ -165,11 +165,13 @@
                                 <span class="material-symbols-outlined">library_books</span> Templates Modbus
                             </a>
                         </li>
+                        % if current_user.get('is_root'):
                         <li>
                             <a href="{{BASE_PATH}}/dev" class="{{'active' if request_path == BASE_PATH + '/dev' else ''}}">
                                 <span class="material-symbols-outlined">terminal</span> Espace Dev
                             </a>
                         </li>
+                        % end
                     </ul>
                 </li>
                 % end
