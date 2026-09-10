@@ -806,58 +806,49 @@ def dev():
             html += "</table>"
             
     elif tab == "api":
-        import inspect
-        import api
-        
-        # Extraction dynamique de la documentation des API
-        api_docs = []
-        for name, obj in inspect.getmembers(api):
-            if inspect.isfunction(obj) and hasattr(obj, '__doc__') and obj.__doc__:
-                doc = obj.__doc__.strip()
-                # On ne prend que les fonctions qui ont été décorées comme routes (on cherche une description dans la docstring)
-                if "Réponse:" in doc:
-                    # Extraction basique des différentes parties
-                    desc = doc.split("Usage:")[0].split("Headers:")[0].split("Payload:")[0].strip()
-                    usage = ""
-                    if "Usage:" in doc:
-                        usage = doc.split("Usage:")[1].split("Réponse:")[0].strip()
-                    payload = ""
-                    if "Payload:" in doc:
-                        payload = doc.split("Payload:")[1].split("Réponse:")[0].strip()
-                        if "Headers:" in payload:
-                            payload = payload.split("Headers:")[0].strip()
-                    headers = ""
-                    if "Headers:" in doc:
-                        headers = doc.split("Headers:")[1].split("Payload:")[0].split("Usage:")[0].split("Réponse:")[0].strip()
-                    reponse = doc.split("Réponse:")[1].strip()
-                    
-                    # On déduit la méthode et l'endpoint à partir du code source si on peut (astuce : on cherche les décorateurs dans api.py)
-                    try:
-                        source_lines = inspect.getsourcelines(obj)[0]
-                        method = "GET"
-                        endpoint = "/" + name
-                        for line in source_lines:
-                            if "@api_app.get(" in line:
-                                method = "GET"
-                                endpoint = line.split('"')[1]
-                                break
-                            elif "@api_app.post(" in line:
-                                method = "POST"
-                                endpoint = line.split('"')[1]
-                                break
-                    except:
-                        method = "UNKNOWN"
-                        endpoint = "/" + name
+        from web.api import api_app
 
-                    api_docs.append({
-                        "method": method,
-                        "endpoint": endpoint,
-                        "desc": desc,
-                        "headers": headers,
-                        "payload": payload,
-                        "usage": usage,
-                        "reponse": reponse
-                    })
+        # Extraction dynamique de la documentation des API a partir du
+        # registre de routes Bottle (api_app.routes). Avant la refonte du
+        # 10 septembre 2026, ce bloc faisait `import api` puis relisait le
+        # code source de ce fichier monolithique pour retrouver, ligne par
+        # ligne, le decorateur @api_app.get/post au-dessus de chaque
+        # fonction. Casse par l'eclatement d'api.py en web/api.py +
+        # services/*.py (plus de module `api` unique a inspecter).
+        # api_app.routes expose directement route.rule et route.method,
+        # plus robuste et plus simple que le parsing de source.
+        api_docs = []
+        for route in api_app.routes:
+            obj = route.callback
+            if not (obj and hasattr(obj, '__doc__') and obj.__doc__):
+                continue
+            doc = obj.__doc__.strip()
+            # On ne prend que les fonctions qui ont été décorées comme routes (on cherche une description dans la docstring)
+            if "Réponse:" in doc:
+                # Extraction basique des différentes parties
+                desc = doc.split("Usage:")[0].split("Headers:")[0].split("Payload:")[0].strip()
+                usage = ""
+                if "Usage:" in doc:
+                    usage = doc.split("Usage:")[1].split("Réponse:")[0].strip()
+                payload = ""
+                if "Payload:" in doc:
+                    payload = doc.split("Payload:")[1].split("Réponse:")[0].strip()
+                    if "Headers:" in payload:
+                        payload = payload.split("Headers:")[0].strip()
+                headers = ""
+                if "Headers:" in doc:
+                    headers = doc.split("Headers:")[1].split("Payload:")[0].split("Usage:")[0].split("Réponse:")[0].strip()
+                reponse = doc.split("Réponse:")[1].strip()
+
+                api_docs.append({
+                    "method": route.method,
+                    "endpoint": route.rule,
+                    "desc": desc,
+                    "headers": headers,
+                    "payload": payload,
+                    "usage": usage,
+                    "reponse": reponse
+                })
         
         html += f"""
     <h2>📖 Documentation des API Boîtiers</h2>

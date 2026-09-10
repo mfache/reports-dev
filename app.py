@@ -1,6 +1,7 @@
 #!/usr/bin/python3
-"""Point d'entree WSGI pour l'API de flotte reports (routes definies dans
-api.py). Expose 'application', attendu par la configuration uWSGI
+"""Point d'entree WSGI pour l'API de flotte reports (routes assemblees
+dans web/api.py, organisees par domaine sous services/). Expose
+'application', attendu par la configuration uWSGI
 (/etc/uwsgi/apps-enabled/reports.ini : module = app:application).
 
 Monte sous /reports/api car nginx transmet le chemin complet sans le
@@ -17,13 +18,18 @@ configurable via la variable d'environnement REPORTS_BASE_PATH, pour
 permettre a l'interface de dev (/reports-dev, app uwsgi separee) de
 tourner sur le meme code sans jamais repondre sous /reports. Sans cette
 variable, le comportement de production est strictement inchange.
+
+10 septembre 2026 (refonte, suite) : api.py (1696 lignes) a ete eclate
+en web/api.py (assemblage + routes transverses) et services/*.py
+(fleet, chantiers, sync, trends, logs, headscale), sur le modele
+rpinode. Voir CAHIER-DES-CHARGES-REFONTE.md.
 """
 
 import os
 
 from bottle import Bottle
 
-from api import api_app
+from web.api import api_app
 from ui import ui_app
 
 BASE_PATH = os.environ.get('REPORTS_BASE_PATH', '/reports')
