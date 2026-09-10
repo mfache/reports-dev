@@ -164,6 +164,11 @@
     </script>
 </head>
 <body hx-boost="true" hx-target="#main-content" hx-swap="innerHTML transition:true">
+    % if bottle.request.path.startswith('/reports-dev'):
+    <div style="background:#f59e0b; color:#171a21; text-align:center; font-weight:700; padding:6px; letter-spacing:1px;">
+        ENVIRONNEMENT DE DEV — données non réelles (base dt_dev)
+    </div>
+    % end
     <div id="network-triangle" title="Connexion établie (En ligne)"></div>
     <header>
         <div style="display: flex; align-items: center; gap: 30px;">
