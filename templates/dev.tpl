@@ -181,6 +181,13 @@
                     <div class="system-version font-mono" style="text-transform: none;">{{auth_user}}</div>
                 </div>
             </div>
+            <div class="system-badge">
+                <span class="material-symbols-outlined text-tertiary">devices</span>
+                <div>
+                    <div class="system-title">TYPE CLIENT</div>
+                    <div class="system-version font-mono" style="text-transform: none;">{{client['client_type']}} ({{client['screen_size']}})</div>
+                </div>
+            </div>
         </div>
     </div>
 

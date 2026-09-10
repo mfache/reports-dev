@@ -20,6 +20,16 @@
     <link rel="stylesheet" href="{{BASE_PATH}}/static/style.css">
     
     <script src="{{BASE_PATH}}/static/htmx.min.js"></script>
+    <script>
+        // Détection de la taille d'écran et stockage en cookie pour le serveur
+        (function() {
+            const size = window.screen.width + "x" + window.screen.height;
+            const currentCookie = document.cookie.split('; ').find(row => row.startsWith('screen_size='));
+            if (!currentCookie || currentCookie.split('=')[1] !== size) {
+                document.cookie = "screen_size=" + size + "; path=/; max-age=31536000; SameSite=Lax";
+            }
+        })();
+    </script>
 </head>
 <body hx-boost="true" hx-target="#main-content" hx-swap="innerHTML transition:true">
     % if BASE_PATH != '/reports':
@@ -96,7 +106,7 @@
                             <select onchange="window.location.href='?uid='+this.value" style="background: transparent; border: none; color: var(--primary); font-weight: 600; padding: 0; width: auto; cursor: pointer;">
                                 % for u in all_users:
                                 <option value="{{u['id']}}" {{'selected' if u['id'] == current_user['id'] else ''}}>
-                                    {{u['nom']}} ({{'CA' if u['cas'] else ('Admin' if u['adm'] else 'Wait')}})
+                                    {{u['nom']}} ({{'ROOT' if u['rot'] else ('Admin' if u['adm'] else ('CA' if u['cas'] else ('Ouvrier' if u['wrk'] else 'Wait')))}})
                                 </option>
                                 % end
                             </select>
@@ -133,6 +143,9 @@
                         <span>Accueil</span>
                     </a>
                 </li>
+                % end
+
+                % if current_user.get('is_ca') or current_user.get('is_admin'):
                 <li>
                     <a href="{{BASE_PATH}}/nodes" class="nav-item {{'active' if '/nodes' in request_path else ''}}">
                         <span class="material-symbols-outlined">router</span>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import bottle
+import hashlib
 from core.config import BASE_PATH
 from core.database import get_db
 
@@ -26,9 +27,11 @@ class TemplateEngine:
             # Ajout des propriétés calculées
             for u in (user, real_user):
                 if u:
-                    u['is_admin'] = bool(u.get('adm'))
+                    u['is_root'] = bool(u.get('rot'))
+                    u['is_admin'] = bool(u.get('adm')) or u['is_root']
                     u['is_ca'] = bool(u.get('cas'))
-                    u['is_wait'] = not u['is_admin'] and not u['is_ca']
+                    u['is_worker'] = bool(u.get('wrk'))
+                    u['is_wait'] = not (u['is_admin'] or u['is_ca'] or u['is_worker'])
             
             bottle.request.current_user = user
             bottle.request.real_user = real_user
@@ -52,7 +55,7 @@ class TemplateEngine:
             try:
                 with db.cursor() as cur:
                     cur.execute("""
-                        SELECT u.id, u.nom, u.cas, u.adm 
+                        SELECT u.id, u.nom, u.cas, u.adm, u.wrk, u.rot 
                         FROM utilisateurs u
                         JOIN utilisateurs_emails e ON u.id = e.utilisateur_id
                         WHERE e.email = %s
@@ -61,25 +64,24 @@ class TemplateEngine:
                     
                     if not row:
                         # Auto-enregistrement si inconnu
-                        import hashlib
                         h = hashlib.md5(email.encode()).hexdigest()[:8]
                         ref_tmp = f"WAIT_{h}"
-                        cur.execute("INSERT INTO utilisateurs (ref, nom, cas, adm) VALUES (%s, %s, 0, 0)", (ref_tmp, user_name or email))
+                        cur.execute("INSERT INTO utilisateurs (ref, nom, cas, adm, wrk, rot) VALUES (%s, %s, 0, 0, 0, 0)", (ref_tmp, user_name or email))
                         new_id = cur.lastrowid
                         cur.execute("INSERT INTO utilisateurs_emails (utilisateur_id, email) VALUES (%s, %s)", (new_id, email))
                         db.commit()
-                        real_user = {"id": new_id, "nom": user_name or email, "cas": 0, "adm": 0}
+                        real_user = {"id": new_id, "nom": user_name or email, "cas": 0, "adm": 0, "wrk": 0, "rot": 0}
                     else:
                         real_user = dict(row)
             finally:
                 db.close()
         
-        # Si pas de mail, on prend Marc Fache (ID 1) comme identité réelle par défaut (dev local)
+        # Si pas de mail (dev local), on prend Marc Fache (ID 1) par défaut
         if not real_user:
             db = get_db()
             try:
                 with db.cursor() as cur:
-                    cur.execute("SELECT id, nom, cas, adm FROM utilisateurs WHERE id = 1")
+                    cur.execute("SELECT id, nom, cas, adm, wrk, rot FROM utilisateurs WHERE id = 1")
                     real_user = dict(cur.fetchone())
             finally:
                 db.close()
@@ -90,7 +92,7 @@ class TemplateEngine:
             db = get_db()
             try:
                 with db.cursor() as cur:
-                    cur.execute("SELECT id, nom, cas, adm FROM utilisateurs WHERE id = %s", (user_id,))
+                    cur.execute("SELECT id, nom, cas, adm, wrk, rot FROM utilisateurs WHERE id = %s", (user_id,))
                     row = cur.fetchone()
                     if row:
                         return dict(row), real_user
@@ -100,15 +102,41 @@ class TemplateEngine:
         # 3. Par défaut, l'utilisateur actuel est l'utilisateur réel
         return real_user, real_user
 
+    def get_client_info(self) -> dict:
+        """Détermine si le client est un smartphone ou une station, et sa taille d'écran si connue."""
+        ua = bottle.request.environ.get('HTTP_USER_AGENT', '').lower()
+        is_mobile = any(x in ua for x in ('iphone', 'android', 'mobile', 'phone'))
+        client_type = 'smartphone' if is_mobile else 'station'
+        
+        screen_size = bottle.request.get_cookie('screen_size', 'inconnue')
+        width = 0
+        height = 0
+        if 'x' in screen_size:
+            try:
+                w_s, h_s = screen_size.split('x', 1)
+                width = int(w_s)
+                height = int(h_s)
+            except ValueError:
+                pass
+
+        return {
+            "client_type": client_type,
+            "is_mobile": is_mobile,
+            "screen_size": screen_size,
+            "screen_width": width,
+            "screen_height": height
+        }
+
     def _get_common_vars(self) -> dict:
-        """Récupère l'utilisateur actuel et la liste globale pour le header."""
+        """Récupère l'utilisateur actuel, la liste globale et les infos client."""
         current_user = self.get_current_user()
         real_user = self.get_real_user()
+        client_info = self.get_client_info()
         
         db = get_db()
         try:
             with db.cursor() as cur:
-                cur.execute("SELECT id, nom, cas, adm FROM utilisateurs ORDER BY nom")
+                cur.execute("SELECT id, nom, cas, adm, wrk, rot FROM utilisateurs ORDER BY nom")
                 all_users = cur.fetchall()
                 
                 return {
@@ -116,7 +144,8 @@ class TemplateEngine:
                     "real_user": real_user,
                     "all_users": all_users,
                     "BASE_PATH": self.base_path,
-                    "request_path": bottle.request.path
+                    "request_path": bottle.request.path,
+                    "client": client_info
                 }
         finally:
             db.close()
@@ -129,12 +158,10 @@ class TemplateEngine:
     def view(self, template_name: str, **kwargs) -> str:
         """
         Rend une page complète emboîtée dans le layout, sauf si HTMX demande
-        un rafraîchissement partiel. Intercepte les utilisateurs en attente.
+        un rafraîchissement partiel.
         """
-        # 1. Préparation des variables communes (User, Path, Real Identity)
+        # 1. Préparation des variables communes
         common = self._get_common_vars()
-        
-        # On fusionne common dans kwargs en priorité pour la sécurité
         for k, v in common.items():
             kwargs[k] = v
 
@@ -142,24 +169,21 @@ class TemplateEngine:
 
         # 2. Sécurité : Interceptions basées sur les rôles
         if current_user.get('is_wait') and template_name not in ('404', 'pending_validation'):
-            # Utilisateur auto-enregistré mais non validé : accès restreint
             template_name = 'pending_validation'
             kwargs['title'] = 'Accès en attente'
         
         elif template_name in ('templates_maintenance', 'dev') and not current_user.get('is_admin'):
-            # Pages réservées aux administrateurs
             template_name = '404'
             kwargs['title'] = 'Accès refusé'
 
-        # 3. Rendu du cœur (la page demandée ou interceptée)
+        # 3. Rendu du cœur
         content = self.render(template_name, **kwargs)
 
-        # 3. Si HTMX, on renvoie juste le cœur (avec le titre pour l'onglet)
+        # 4. HTMX ou Layout complet
         if bottle.request.headers.get('HX-Request') == 'true':
             title = kwargs.get('title', 'Deltathermic')
             return f"<title>{title}</title>\n{content}"
 
-        # 4. Sinon, on emboîte dans la grande poupée (Layout)
         return self.render('layout', base=content, **kwargs)
 
 # Instance unique exportée
