@@ -1,15 +1,24 @@
-% # Page d'attente de validation "Poupée Moyenne"
+% # Page d'attente de validation "Poupée Moyenne" (Kinetic Infrastructure)
 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; padding: 20px;">
-    <div style="font-size: 5em; margin-bottom: 20px;">⏳</div>
-    <h1 style="color: var(--accent-orange); margin-bottom: 10px;">Accès en attente de validation</h1>
-    <div style="background: var(--card-bg); border: 1px solid var(--border-color); padding: 30px; border-radius: 12px; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-        <p style="font-size: 1.1em; line-height: 1.6; margin-bottom: 20px;">
-            Bonjour <strong>{{current_user['nom']}}</strong>,<br><br>
-            Votre compte a été créé automatiquement suite à votre première connexion. 
-            Cependant, un administrateur doit valider votre profil (Chargé d'Affaires ou Admin) avant que vous ne puissiez accéder aux données de la flotte.
+    <div style="font-size: 5rem; margin-bottom: 20px; animation: pulse 2s infinite;">⏳</div>
+    <h2 style="color: var(--tertiary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;">Accès en attente</h2>
+    
+    <div class="card luminescent-border" style="max-width: 500px; padding: 40px; margin-top: 20px;">
+        <p style="font-size: 1.1rem; line-height: 1.6; margin-bottom: 30px;">
+            Bonjour <strong class="text-primary">{{current_user['nom']}}</strong>,<br><br>
+            Votre compte a été créé suite à votre authentification Google. 
+            Cependant, un <strong>administrateur</strong> doit valider votre rôle (CA ou Admin) avant de libérer l'accès aux données.
         </p>
-        <p style="color: var(--text-muted); font-size: 0.9em; border-top: 1px solid var(--border-color); pt: 20px;">
-            Veuillez contacter Marc Fache pour activer votre accès.
-        </p>
+        <div style="padding-top: 20px; border-top: 1px solid var(--outline-variant); color: var(--on-surface-variant); font-size: 0.85rem;">
+            Veuillez contacter <strong>Marc Fache</strong> pour l'activation.
+        </div>
     </div>
 </div>
+
+<style>
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.8; }
+}
+</style>

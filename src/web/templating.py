@@ -115,7 +115,8 @@ class TemplateEngine:
                     "current_user": current_user,
                     "real_user": real_user,
                     "all_users": all_users,
-                    "BASE_PATH": self.base_path
+                    "BASE_PATH": self.base_path,
+                    "request_path": bottle.request.path
                 }
         finally:
             db.close()
