@@ -326,11 +326,16 @@ reports/
       corrigé au passage : le bandeau visuel de dev (§11) ne s'affichait
       jamais (`bottle.request.path` non fiable à travers un montage Bottle,
       voir NOTES-evolutions.md).
-- [ ] `./run_tests.sh` exécute une suite réelle et couvre au moins : montage
-      WSGI (`/reports` et `/reports/api` répondent), une route par service,
-      l'exemption PWA de `sw.js`/`manifest.json`.
-- [ ] `./run.sh` refuse de recharger l'app si les tests échouent, et ne
-      recharge jamais que le process `reports` (jamais tout uwsgi).
+- [x] `./run_tests.sh` exécute une suite réelle (11 septembre 2026, 32
+      tests) et couvre : montage WSGI (`/reports-dev` et `/reports-dev/api`
+      répondent, garde-fou sur le nombre de routes), une route par service,
+      l'exemption PWA de `sw.js`/`manifest.json`, et le bug de chemins en
+      dur du 10 septembre (`test_core_paths.py`). Déduit le venv/l'app du
+      nom du dossier courant, donc réutilisable tel quel après promotion
+      en production.
+- [x] `./run.sh` refuse de recharger l'app si les tests échouent (vérifié
+      manuellement avec un échec provoqué), et ne recharge jamais que le
+      process de cette app (jamais `service uwsgi ...`).
 - [ ] Plus aucun fichier `*.bak_*` dans le dossier applicatif vivant :
       l'historique est dans Git.
 - [ ] `README.md` permet à quelqu'un qui découvre le projet de comprendre
