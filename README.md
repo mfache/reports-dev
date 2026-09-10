@@ -85,9 +85,15 @@ même principe qu'un canal dev/stable : voir
 - Code : `/opt/reports-dev` (ce dossier, dépôt Git local).
 - Servie sur `https://docs.deltathermic.be/reports-dev/`, même
   authentification Google que la production.
-- Base de données séparée (`dt_dev`, structure seule au départ + un
-  utilisateur de dev synthétique — jamais de vraies données copiées
-  depuis `dt`).
+- Base de données séparée (`dt_dev`, schéma et utilisateur MariaDB
+  dédiés). Peuplée le 11 septembre 2026 par un dump complet de `dt`
+  (décision explicite : même périmètre d'accès que la prod — même
+  authentification Google, même liste blanche d'e-mails — donc pas
+  d'exposition supplémentaire). `dt_dev` n'est **jamais** écrite en
+  retour vers `dt` et diverge naturellement au fil des tests ; la
+  resynchroniser au besoin par le même processus
+  (`DROP`/`CREATE DATABASE dt_dev` + `mysqldump dt | mysql dt_dev`,
+  voir `docs/operations/NOTES-evolutions.md`).
 - Bandeau visuel orange « ENVIRONNEMENT DE DEV » sur chaque page pour ne
   jamais confondre avec la production.
 

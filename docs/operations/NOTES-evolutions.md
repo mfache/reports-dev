@@ -609,3 +609,66 @@ Tous les objectifs organisationnels du §4 sont atteints dans
 reste à faire quand ce sera décidé, et la séparation complète
 logique/routage (reportée, voir plus haut et §9 du cahier des
 charges).
+
+## 11 septembre 2026 (suite) — dt_dev peuplée par un dump reel de dt
+
+Décision explicite (Marc) : « pas de risque à faire un dump des tables
+de prod vers les tables de dev ». Revient sur le choix initial
+(structure seule + utilisateur synthétique, §11 du cahier des charges)
+— justifié par le fait que `/reports-dev` et `/reports` partagent
+exactement le même périmètre d'accès (même authentification Google,
+même liste blanche d'e-mails dans `authorized_emails_google.txt`) :
+copier de vraies données n'élargit pas l'exposition par rapport à la
+production elle-même.
+
+### Opération
+
+1. **Constat préalable** : `dt_dev.boitier_registre` contenait des
+   résidus des propres tests automatisés (`rpi01`..`rpi08` générés par
+   `test_register_auto_avec_secret_attribue_un_hostname_rpiNN` à chaque
+   exécution depuis une base vide, plus des `test-*` de
+   `test_register_avec_secret_...`). Ces `rpiNN` seraient entrés en
+   collision avec les vrais hostnames de la flotte lors du chargement
+   du dump.
+2. **Purge propre** : `DROP DATABASE dt_dev` puis
+   `CREATE DATABASE dt_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+   (plutôt que des `TRUNCATE` table par table, plus simple et plus
+   sûr contre les contraintes de clés étrangères).
+3. **Chargement** : `mysqldump --routines --triggers dt | mysql dt_dev`
+   (structure + données en un seul passage, cohérent avec la méthode
+   utilisée pour la création initiale structure-seule).
+4. **Droits** : `GRANT ALL PRIVILEGES ON dt_dev.*` étant lié au nom du
+   schéma (pas à un identifiant interne), `DROP`/`CREATE DATABASE` ne
+   fait perdre aucun droit — vérifié (`SHOW GRANTS FOR
+   'boitier_app_dev'@'localhost'` identique avant/après).
+
+### Vérifié
+
+- Comptes de lignes identiques entre `dt` et `dt_dev` sur les tables
+  clés (`utilisateurs` 6/6, `chantiers` 13/13, `boitier_registre` 1/1,
+  `boitier_trends` 110807/110807).
+- L'utilisateur par défaut (`uid=1` coté `ui.py::reports_root()`) existe
+  bel et bien dans les vraies données (« Marc Fache ») : plus besoin de
+  l'utilisateur de dev synthétique créé le 10 septembre.
+- `./run_tests.sh` : 32/32 toujours au vert avec les vraies données en
+  place (les tests utilisent des hostnames/cpu_serial aléatoires par
+  exécution, aucune collision avec les vraies données).
+- Test de bout en bout via nginx (`/reports-dev/api/ping`,
+  `/reports-dev/api/usage`) après l'opération.
+- PID de `reports` (prod) vérifiés inchangés — opération purement au
+  niveau de la base, aucun redemarrage necessaire cote prod.
+
+### Documentation mise à jour en conséquence
+
+Le bandeau visuel de dev (`templates/layout.tpl`) affirmait « données
+non réelles » — devenu faux, corrigé en « base dt_dev, jamais la
+production » (affirmation qui reste vraie indépendamment du contenu des
+données). `README.md` et `CAHIER-DES-CHARGES-REFONTE.md` §11 mis à jour
+pour ne plus affirmer l'absence de vraies données dans `dt_dev`.
+
+### Pour la suite
+
+`dt_dev` n'est **jamais** écrite en retour vers `dt` et divergera
+naturellement de la production au fil des tests (c'est le but). La
+resynchroniser au besoin par le même processus (étapes 2-3
+ci-dessus).

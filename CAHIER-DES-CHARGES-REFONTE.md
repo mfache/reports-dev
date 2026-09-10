@@ -416,7 +416,22 @@ flowchart TD
    `core/database.py` lit `DB_ENV_FILE` depuis l'environnement plutôt
    qu'en dur. Aucun boîtier réel ne doit jamais pointer vers
    `/reports-dev/api` (les `FleetClient` de la flotte utilisent
-   `/reports/api` en dur — à vérifier une fois, puis documenter).
+   `/reports/api` en dur — vérifié, aucun risque).
+
+   **Décision révisée le 11 septembre 2026** : `dt_dev` a d'abord été
+   peuplée structure seule (`mysqldump --no-data`) avec un utilisateur de
+   dev synthétique, par prudence par défaut. Sur decision explicite
+   (même périmètre d'accès que la prod : même authentification Google,
+   même liste blanche d'e-mails, donc pas d'exposition supplémentaire à
+   copier de vraies données), `dt_dev` est désormais peuplée par un dump
+   complet de `dt` (`DROP`/`CREATE DATABASE dt_dev` puis
+   `mysqldump --routines --triggers dt | mysql dt_dev`, après avoir
+   purgé les résidus de tests qui auraient pu entrer en collision avec
+   de vrais hostnames). Toujours **jamais écrite en retour vers `dt`**,
+   et `dt_dev` diverge naturellement de la prod au fil des tests — la
+   resynchroniser au besoin par le même processus. Voir
+   `docs/operations/NOTES-evolutions.md` (11 septembre 2026) pour le
+   détail de l'opération.
 4. **nginx — bloc symétrique, même OAuth.** `location /reports-dev`,
    `location = /reports-dev/sw.js` et `.../manifest.json` (exemptées de
    `auth_request`, même leçon que l'incident PWA du 10 septembre), et la
@@ -427,8 +442,12 @@ flowchart TD
    PWA installée sur `/reports-dev/` ne peut pas entrer en conflit avec
    celle installée sur `/reports/`.
 5. **Garde-fou visuel.** Bandeau dans `layout.tpl`, conditionné à
-   `REPORTS_BASE_PATH != "/reports"` (« ENVIRONNEMENT DE DEV — données non
-   réelles »), pour ne jamais confondre les deux environnements à l'œil.
+   `REPORTS_BASE_PATH != "/reports"` (« ENVIRONNEMENT DE DEV — base
+   dt_dev, jamais la production »), pour ne jamais confondre les deux
+   environnements à l'œil. **Mise à jour du 11 septembre** : le texte
+   affirmait initialement « données non réelles », devenu faux depuis que
+   `dt_dev` est peuplée par un dump de `dt` (voir plus bas) — corrigé
+   pour ne plus faire cette affirmation.
 
 ### Workflow quotidien
 

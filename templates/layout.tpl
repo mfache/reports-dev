@@ -167,7 +167,7 @@
 <body hx-boost="true" hx-target="#main-content" hx-swap="innerHTML transition:true">
     % if BASE_PATH != '/reports':
     <div style="background:#f59e0b; color:#171a21; text-align:center; font-weight:700; padding:6px; letter-spacing:1px;">
-        ENVIRONNEMENT DE DEV — données non réelles (base dt_dev)
+        ENVIRONNEMENT DE DEV — base dt_dev, jamais la production
     </div>
     % end
     <div id="network-triangle" title="Connexion établie (En ligne)"></div>
