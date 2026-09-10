@@ -11,13 +11,23 @@ ecrasement accidentel de ce fichier par la copie de headscale-admin/app.py).
 ui.py) sous /reports. Absent depuis la reconstruction du 9 septembre :
 seule l'API repondait, l'UI renvoyait un 404 une fois l'authentification
 passee (jamais remarque faute de test de bout en bout a l'epoque).
+
+10 septembre 2026 (refonte) : le prefixe de montage est desormais
+configurable via la variable d'environnement REPORTS_BASE_PATH, pour
+permettre a l'interface de dev (/reports-dev, app uwsgi separee) de
+tourner sur le meme code sans jamais repondre sous /reports. Sans cette
+variable, le comportement de production est strictement inchange.
 """
+
+import os
 
 from bottle import Bottle
 
 from api import api_app
 from ui import ui_app
 
+BASE_PATH = os.environ.get('REPORTS_BASE_PATH', '/reports')
+
 application = Bottle()
-application.mount('/reports/api', api_app)
-application.mount('/reports', ui_app)
+application.mount(f'{BASE_PATH}/api', api_app)
+application.mount(BASE_PATH, ui_app)

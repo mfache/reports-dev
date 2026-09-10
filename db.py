@@ -1,6 +1,11 @@
+import os
+
 import pymysql
 
-DB_ENV_FILE = "/etc/boitier-fleet/db.env"
+# Surchargeable par l'app uwsgi (voir reports-dev.ini) pour que l'interface
+# de dev lise /etc/boitier-fleet/db-dev.env (base MariaDB dt_dev separee)
+# sans jamais toucher a la config ni aux donnees de production.
+DB_ENV_FILE = os.environ.get("DB_ENV_FILE", "/etc/boitier-fleet/db.env")
 
 def _read_env(path):
     env = {}
