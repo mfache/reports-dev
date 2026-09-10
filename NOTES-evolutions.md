@@ -315,3 +315,51 @@ modification du code de production.
   unattended-upgrades) sans rapport avec `reports` — non traités
   volontairement pour ne pas risquer d'impacter la prod hors périmètre
   de cette tâche.
+
+## 10 septembre 2026 (fin d'après-midi) — core/config.py, core/database.py, core/paths.py
+
+Suite de la refonte dans `/opt/reports-dev` (§4/§6 du cahier des
+charges). Deux étapes, la seconde ayant révélé un vrai bug.
+
+### core/config.py et core/database.py
+
+Extraction sans surprise : `DB_ENV_FILE`/`REPORTS_BASE_PATH` centralisés
+dans `core/config.py`, `get_db()` déplacé dans `core/database.py`,
+l'ancien `db.py` supprimé. `api.py`, `ui.py` et les scripts annexes
+mis à jour. Validé par `py_compile` + import réel du module `app`.
+
+### core/paths.py — bug réel trouvé en cours de route
+
+En préparant `core/paths.py` (chemins calculés depuis `__file__`, sur
+le modèle `rpinode`), découverte que `ui.py` pointait **en dur** vers
+`/var/www/reports/views` et `/var/www/reports/static`
+(`TEMPLATE_PATH.append(...)`, `static_file(..., root=...)`). Conséquence
+concrète : depuis sa mise en place, `/reports-dev` affichait en réalité
+les templates et fichiers statiques de **production**, pas ceux de
+`/opt/reports-dev` — la copie de travail n'était donc pas isolée comme
+prévu. Plus grave : la console SQL de la page `/dev` postait vers
+`fetch('/reports/sql', ...)` en dur, donc **exécutait ses requêtes sur
+la base de production (`dt`) au lieu de `dt_dev`**, quel que soit
+l'environnement affiché à l'écran.
+
+Ce n'était pas visible dans les tests précédents (`curl` sur les codes
+HTTP uniquement) — exactement le type d'angle mort déjà identifié le
+10 septembre matin sur l'incident PWA/OAuth (« tester le parcours
+complet, pas seulement `curl` »).
+
+**Fix** : `core/paths.py` calcule `VIEWS_DIR`/`STATIC_DIR`/`WEBDAV_DIR`
+à partir de l'emplacement réel du fichier, et tous les usages de
+`/reports` comme préfixe de l'app elle-même (statics, manifest, icône,
+en-tête `Service-Worker-Allowed`, console SQL, texte de doc) utilisent
+désormais `core.config.BASE_PATH`. Vérifié par un appel WSGI direct de
+la route `/dev` (`sudo -u mariadb`, pour lire `db-dev.env` avec les
+mêmes droits que le vrai process uwsgi) confirmant `fetch('/reports-dev/sql'`
+et des liens `manifest`/`apple-touch-icon` sous `/reports-dev/`, puis
+par un test de bout en bout via nginx. PID de `reports` (prod)
+vérifiés inchangés avant/après.
+
+**Leçon à retenir pour la suite de la refonte** : chercher
+systématiquement les chemins et préfixes en dur (`grep -n "/var/www/reports\|/reports/"`)
+avant de considérer un module « terminé », l'ancien code n'ayant jamais
+été pensé pour tourner ailleurs qu'à son unique emplacement de
+production historique.
