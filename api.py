@@ -13,7 +13,8 @@ import urllib.error
 import urllib.request
 
 from bottle import Bottle, request, response, HTTPResponse
-from db import get_db, _ENV
+from core.database import get_db
+from core.config import _ENV
 
 api_app = Bottle()
 

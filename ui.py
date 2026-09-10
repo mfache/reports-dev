@@ -3,7 +3,7 @@ import urllib.parse
 import datetime
 
 from bottle import Bottle, request, response, static_file, template, TEMPLATE_PATH
-from db import get_db
+from core.database import get_db
 
 def format_human_date(dt):
     if not dt:
