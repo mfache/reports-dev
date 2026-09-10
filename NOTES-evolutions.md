@@ -464,3 +464,53 @@ renvoie `200`, contient « Utilisateur Dev », ne contient plus
 Si des tests plus poussés de l'UI de dev nécessitent des chantiers/boîtiers
 de test, insérer des données synthétiques équivalentes dans `dt_dev`
 (jamais copier de vraies lignes depuis `dt`).
+
+## 10 septembre 2026 (nuit) — eclatement d'ui.py en web/ui.py + web/stream.py + services/templates_maintenance.py
+
+Suite et fin (provisoire) du découpage par domaine du §6 du cahier des
+charges. `ui.py` (1169 lignes, 18 routes) suit le même principe qu'`api.py` :
+même nuance assumée (routage et logique restent ensemble par route), mais
+cette fois la majorité du fichier reste groupée dans `web/ui.py` (accueil,
+pages chantier, nœuds, console SQL, page `/dev`) — seuls deux sous-domaines
+étaient assez autonomes pour justifier un fichier à part :
+
+- `web/stream.py` : les 2 routes SSE (`reports_sse`,
+  `chantier/<id>/reports_sse`), qui relaient les messages du broker MQTT
+  local sans toucher à la base de données.
+- `services/templates_maintenance.py` : vue d'ensemble des templates
+  Modbus partagés, diff entre deux révisions, dépréciation, suppression.
+
+### Bug réel trouvé et corrigé : le bandeau dev ne s'affichait jamais
+
+En testant la page d'accueil après l'éclatement (`GET /`), le bandeau
+visuel orange ajouté le 10 septembre après-midi (§11 du cahier des
+charges) était absent. Cause : sa condition
+(`bottle.request.path.startswith('/reports-dev')`) ne peut **jamais**
+fonctionner une fois l'application montée par Bottle — à l'intérieur d'un
+sous-app monté, `request.path` est **relatif au point de montage**
+(vérifié par un appel WSGI direct sur une route de debug temporaire :
+`/reports-dev/__debug_path` devient `'/__debug_path'` côté `ui_app`).
+Le bandeau n'a donc jamais pu s'afficher depuis sa création, mais ça n'avait
+jamais été remarqué faute d'avoir testé le rendu HTML complet à l'époque
+(seulement la présence de la chaîne dans le fichier source).
+
+**Fix** : condition remplacée par `core.config.BASE_PATH != '/reports'`,
+indépendante de tout comportement de montage. Vérifié dans les deux sens
+(bandeau présent avec `REPORTS_BASE_PATH=/reports-dev`, absent sans cette
+variable — donc absent en configuration équivalente à la prod).
+
+**Leçon** : `bottle.request.path` (et plus largement tout ce qui dépend du
+WSGI `PATH_INFO`/`SCRIPT_NAME`) n'est **pas fiable** pour détecter le
+préfixe de montage externe d'une sous-application Bottle. Préférer une
+valeur explicite connue à l'avance (ici `core.config.BASE_PATH`).
+
+### Vérifié
+
+- `py_compile` sur tout le projet.
+- Import réel du module `app` (`sudo -u mariadb`) : 16/16 routes API et
+  18/18 routes UI identiques à avant l'éclatement.
+- Appels WSGI directs : `GET /` (contient le bandeau dev et l'utilisateur
+  de dev), `GET /dev?tab=api`, `GET /nodes`, `GET /maintenance/templates`.
+- Test de bout en bout via nginx après rechargement ciblé (`kill -HUP`
+  sur le PID de `reports-dev` uniquement).
+- PID de `reports` (prod) vérifiés inchangés avant/après.
