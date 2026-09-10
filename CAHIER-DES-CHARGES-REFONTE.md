@@ -166,6 +166,16 @@ Constats :
 
 ## 6. Architecture cible proposée
 
+**Etat au 10 septembre 2026 (soir)** : `core/` et l'éclatement d'`api.py`
+sont faits dans `/opt/reports-dev` (voir NOTES-evolutions.md). Nuance par
+rapport au tableau ci-dessous : les fichiers `services/*.py` issus
+d'`api.py` contiennent encore le routage Bottle (decorateurs `@api_app.get`/
+`post`) directement, pas seulement de la logique pure - voir la nuance
+assumee au §9. `web/api.py` existe deja mais sous une forme d'assemblage
+(routes transverses + import des modules `services/` pour effet de bord),
+pas encore le pur routeur qui delegue decrit ici. `ui.py` n'a pas encore
+été touche (`web/ui.py`, `web/stream.py` restent a faire).
+
 ```
 reports/
 ├── app.py                     # inchangé dans son rôle : mount api_app + ui_app,
@@ -292,9 +302,21 @@ reports/
 
 ## 9. Critères d'acceptation
 
-- [ ] `api.py` et `ui.py` ne contiennent plus que du routage Bottle (pas de
+- [x] `api.py` (1696 lignes) est éclaté par domaine metier dans
+      `services/*.py` (fleet, chantiers, sync, trends, logs, headscale),
+      `web/api.py` ne gardant que l'assemblage et les routes transverses
+      (10 septembre 2026). **Nuance assumée** : chaque route garde sa
+      logique metier et ses requetes SQL inline (ouverture DB,
+      `request.json`, `json_ok`/`json_error`) - la separation complete
+      « services sans aucune dependance Bottle / web qui ne fait que
+      router » est **délibérément reportée** tant qu'il n'existe pas de
+      suite de tests pour rattraper une regression subtile lors d'une
+      reecriture aussi profonde (voir NOTES-evolutions.md, entree du 10
+      septembre soir, pour la justification complete). A reprendre une
+      fois le point suivant (tests reels) atteint.
+- [ ] `ui.py` ne contient encore que du routage Bottle (pas de
       logique métier ni de requêtes SQL directement dans les fonctions de
-      route).
+      route) : pas encore fait (seul `api.py` a ete traite pour l'instant).
 - [ ] `./run_tests.sh` exécute une suite réelle et couvre au moins : montage
       WSGI (`/reports` et `/reports/api` répondent), une route par service,
       l'exemption PWA de `sw.js`/`manifest.json`.
