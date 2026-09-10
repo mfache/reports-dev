@@ -1,4 +1,5 @@
 % import bottle
+% from core.config import BASE_PATH
 % is_htmx = bottle.request.headers.get('HX-Request') == 'true'
 % if is_htmx:
     <title>{{ get('title', 'Delta Thermic') }}</title>
@@ -164,7 +165,7 @@
     </script>
 </head>
 <body hx-boost="true" hx-target="#main-content" hx-swap="innerHTML transition:true">
-    % if bottle.request.path.startswith('/reports-dev'):
+    % if BASE_PATH != '/reports':
     <div style="background:#f59e0b; color:#171a21; text-align:center; font-weight:700; padding:6px; letter-spacing:1px;">
         ENVIRONNEMENT DE DEV — données non réelles (base dt_dev)
     </div>

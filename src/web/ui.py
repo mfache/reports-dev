@@ -1,8 +1,27 @@
+"""Point d'entree de l'UI web `reports` : cree `ui_app`, les pages
+principales (accueil, chantier, noeuds, console SQL, page /dev), puis
+importe `web.stream` et `services.templates_maintenance` pour que leurs
+routes s'enregistrent sur `ui_app` (effet de bord de l'import).
+
+Sur le modele rpinode/src/web : extrait d'ui.py lors de la refonte (voir
+CAHIER-DES-CHARGES-REFONTE.md). Contrairement a web/api.py, la majorite
+des routes reste ici (SSE et maintenance des templates sont les deux
+seuls sous-domaines suffisamment autonomes pour justifier un fichier a
+part) - meme nuance assumee qu'au decoupage d'api.py : chaque route
+garde sa logique et ses requetes SQL inline.
+
+Ordre d'import important : `ui_app` doit exister avant que
+`web.stream` et `services.templates_maintenance` ne fassent
+`from web.ui import ui_app` pour y enregistrer leurs routes.
+"""
+from __future__ import annotations
+
 import json
 import urllib.parse
 import datetime
 
 from bottle import Bottle, request, response, static_file, template, TEMPLATE_PATH
+
 from core.database import get_db
 from core.config import BASE_PATH
 from core.paths import VIEWS_DIR, STATIC_DIR
@@ -60,15 +79,18 @@ TEMPLATE_PATH.append(str(VIEWS_DIR))
 def error404_ui(error):
     return template('404')
 
+
 @ui_app.get("/static/<filepath:path>")
 def serve_static(filepath):
     return static_file(filepath, root=str(STATIC_DIR))
+
 
 @ui_app.get("/sw.js")
 def serve_sw():
     res = static_file("sw.js", root=str(STATIC_DIR), mimetype="application/javascript")
     res.set_header("Service-Worker-Allowed", f"{BASE_PATH}/")
     return res
+
 
 @ui_app.get("/manifest.json")
 def serve_manifest():
@@ -86,6 +108,7 @@ def serve_manifest():
         except Exception:
             pass
     return static_file("manifest.json", root=str(STATIC_DIR), mimetype="application/manifest+json")
+
 
 @ui_app.get("/")
 def reports_root():
@@ -149,6 +172,7 @@ def reports_root():
                     my_chantiers=my_chantiers,
                     other_chantiers=other_chantiers)
 
+
 @ui_app.post("/chantier/<chantier_id:int>/counts")
 def chantier_counts(chantier_id):
     client_state = request.json or {}
@@ -189,109 +213,6 @@ def chantier_counts(chantier_id):
             diff[key] = {'c': server_val, 'v': row['value']}
 
     return diff
-
-import time
-import queue
-import paho.mqtt.client as mqtt
-
-@ui_app.get("/reports_sse")
-def global_sse():
-    """
-    Global Server-Sent Events endpoint to notify clients of global events
-    like API activity.
-    """
-    response.content_type = 'text/event-stream'
-    response.cache_control = 'no-cache'
-    response.headers['Access-Control-Allow-Origin'] = '*'
-
-    q = queue.Queue()
-
-    def on_message(client, userdata, msg):
-        try:
-            q.put(msg.payload.decode('utf-8'))
-        except Exception:
-            pass
-
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    client.on_message = on_message
-    
-    try:
-        client.connect("127.0.0.1", 1883, 60)
-        client.subscribe("reports/sse/updates")
-        client.loop_start()
-    except Exception as e:
-        return f"Erreur MQTT: {str(e)}"
-
-    def generate():
-        yield "event: ping\ndata: connected\n\n"
-        
-        try:
-            while True:
-                try:
-                    msg = q.get(timeout=10)
-                    yield f"data: {msg}\n\n"
-                except queue.Empty:
-                    yield ":\n\n"
-        finally:
-            client.loop_stop()
-            client.disconnect()
-
-    return generate()
-
-@ui_app.get("/chantier/<chantier_id:int>/reports_sse")
-def chantier_sse(chantier_id):
-    """
-    Server-Sent Events endpoint to notify clients when new data is available.
-    Subscribes to the local MQTT broker and proxies messages to the client.
-    """
-    response.content_type = 'text/event-stream'
-    response.cache_control = 'no-cache'
-    response.headers['Access-Control-Allow-Origin'] = '*'
-
-    # Queue thread-safe pour communiquer entre le callback MQTT et le flux web
-    q = queue.Queue()
-
-    def on_message(client, userdata, msg):
-        try:
-            # Dès qu'on reçoit un message MQTT, on le place dans la file d'attente
-            q.put(msg.payload.decode('utf-8'))
-        except Exception:
-            pass
-
-    # Connexion du client MQTT spécifique à ce flux SSE
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    client.on_message = on_message
-    
-    try:
-        client.connect("127.0.0.1", 1883, 60)
-        # On s'abonne aux mises à jour générales
-        client.subscribe("reports/sse/updates")
-        client.loop_start()
-    except Exception as e:
-        return f"Erreur MQTT: {str(e)}"
-
-    def generate():
-        # Ping initial pour confirmer la connexion au frontend
-        yield "event: ping\ndata: connected\n\n"
-        
-        try:
-            while True:
-                # Récupère le prochain message avec un timeout pour éviter un blocage total
-                # Le timeout permet de vérifier régulièrement si le client web a fermé la connexion
-                try:
-                    msg = q.get(timeout=5)
-                    # Si c'est un ping d'activité API, on peut le relayer
-                    # msg contient déjà le JSON prêt à l'emploi
-                    yield f"data: {msg}\n\n"
-                except queue.Empty:
-                    # Envoi d'un "keep-alive" vide si rien ne se passe
-                    yield ":\n\n"
-        finally:
-            # Nettoyage indispensable lorsque le navigateur coupe la connexion
-            client.loop_stop()
-            client.disconnect()
-
-    return generate()
 
 @ui_app.post("/chantier/<chantier_id:int>/chart-data")
 def chantier_chart_data(chantier_id):
@@ -360,6 +281,7 @@ def chantier_chart_data(chantier_id):
         db.close()
 
     return {"datasets": datasets}
+
 
 @ui_app.get("/chantier/<chantier_id:int>")
 
@@ -486,6 +408,7 @@ def chantier_details(chantier_id):
                     manifest_url=manifest_url)
 
 
+
 @ui_app.post("/chantier/<chantier_id:int>/purge")
 def chantier_purge(chantier_id):
     """Purger les relevés (trends) d'un chantier complet ou d'un équipement (device) spécifique."""
@@ -551,6 +474,7 @@ def chantier_purge(chantier_id):
     return {"status": "ok", "deleted": deleted_count, "message": f"{deleted_count} relevé(s) supprimé(s)."}
 
 
+
 @ui_app.get("/chantier/<chantier_id:int>/graph")
 def chantier_graph_view(chantier_id):
     """Page minimale, sans tableau ni navigation, destinee au scan de QR
@@ -579,6 +503,7 @@ def chantier_graph_view(chantier_id):
                     chantier=chantier,
                     chart_param_json=json.dumps(chart_param),
                     manifest_url=manifest_url)
+
 
 
 @ui_app.get("/nodes")
@@ -617,6 +542,7 @@ def nodes_view():
                     config_count=config_count,
                     format_human_date=format_human_date)
 
+
 @ui_app.post("/sql")
 def execute_sql():
     db = get_db()
@@ -638,6 +564,7 @@ def execute_sql():
         return json.dumps({"error": str(e)})
     finally:
         db.close()
+
 
 @ui_app.get("/dev")
 def dev():
@@ -897,273 +824,8 @@ def dev():
     return html
 
 
-def compute_template_diff(def1, def2):
-    """
-    Compare deux définitions de templates Modbus et retourne les différences.
-    """
-    reads1 = def1.get("reads", []) if isinstance(def1, dict) else []
-    reads2 = def2.get("reads", []) if isinstance(def2, dict) else []
-
-    # Map by function:address
-    map1 = {f"{r.get('function', 3)}:{r.get('address', r.get('reg', 0))}": r for r in reads1}
-    map2 = {f"{r.get('function', 3)}:{r.get('address', r.get('reg', 0))}": r for r in reads2}
-
-    all_keys = sorted(list(set(map1.keys()) | set(map2.keys())), key=lambda k: (int(k.split(':')[0]), int(k.split(':')[1])))
-
-    diff_registers = []
-    for k in all_keys:
-        r1 = map1.get(k)
-        r2 = map2.get(k)
-        if r1 is None and r2 is not None:
-            diff_registers.append({
-                "status": "added",
-                "key": k,
-                "reg": r2.get("address", r2.get("reg", 0)),
-                "function": r2.get("function", 3),
-                "name": r2.get("label") or r2.get("name", ""),
-                "type": r2.get("type", "u16"),
-                "scale": r2.get("scale", 1.0),
-                "unit": r2.get("unit", ""),
-                "changes": {}
-            })
-        elif r1 is not None and r2 is None:
-            diff_registers.append({
-                "status": "removed",
-                "key": k,
-                "reg": r1.get("address", r1.get("reg", 0)),
-                "function": r1.get("function", 3),
-                "name": r1.get("label") or r1.get("name", ""),
-                "type": r1.get("type", "u16"),
-                "scale": r1.get("scale", 1.0),
-                "unit": r1.get("unit", ""),
-                "changes": {}
-            })
-        else:
-            changes = {}
-            for attr in ["name", "label", "type", "scale", "unit"]:
-                v1 = r1.get(attr)
-                v2 = r2.get(attr)
-                if attr in ("name", "label"):
-                    l1 = r1.get("label") or r1.get("name", "")
-                    l2 = r2.get("label") or r2.get("name", "")
-                    if l1 != l2:
-                        changes["name"] = {"old": l1, "new": l2}
-                elif v1 != v2 and (v1 is not None or v2 is not None):
-                    changes[attr] = {"old": v1, "new": v2}
-
-            if changes:
-                diff_registers.append({
-                    "status": "modified",
-                    "key": k,
-                    "reg": r2.get("address", r2.get("reg", 0)),
-                    "function": r2.get("function", 3),
-                    "name": r2.get("label") or r2.get("name", ""),
-                    "type": r2.get("type", "u16"),
-                    "scale": r2.get("scale", 1.0),
-                    "unit": r2.get("unit", ""),
-                    "changes": changes
-                })
-            else:
-                diff_registers.append({
-                    "status": "unchanged",
-                    "key": k,
-                    "reg": r2.get("address", r2.get("reg", 0)),
-                    "function": r2.get("function", 3),
-                    "name": r2.get("label") or r2.get("name", ""),
-                    "type": r2.get("type", "u16"),
-                    "scale": r2.get("scale", 1.0),
-                    "unit": r2.get("unit", ""),
-                    "changes": {}
-                })
-
-    meta_changes = {}
-    if isinstance(def1, dict) and isinstance(def2, dict):
-        for meta_key in ["base", "port", "unit", "notes"]:
-            m1 = def1.get(meta_key)
-            m2 = def2.get(meta_key)
-            if m1 != m2 and (m1 is not None or m2 is not None):
-                meta_changes[meta_key] = {"old": m1, "new": m2}
-
-    return {
-        "registers": diff_registers,
-        "meta_changes": meta_changes,
-        "added_count": len([r for r in diff_registers if r["status"] == "added"]),
-        "removed_count": len([r for r in diff_registers if r["status"] == "removed"]),
-        "modified_count": len([r for r in diff_registers if r["status"] == "modified"]),
-        "unchanged_count": len([r for r in diff_registers if r["status"] == "unchanged"])
-    }
-
-
-@ui_app.get("/maintenance/templates")
-def templates_maintenance_view():
-    user_id = request.query.get("uid", "1")
-    db = get_db()
-    try:
-        with db.cursor() as cur:
-            cur.execute("SELECT id, nom, cas, adm FROM utilisateurs WHERE id = %s", (user_id,))
-            current_user = cur.fetchone()
-            if not current_user:
-                current_user = {"id": 1, "nom": "Admin", "cas": 0, "adm": 1}
-
-            cur.execute("SELECT id, nom, cas FROM utilisateurs ORDER BY nom")
-            all_users = cur.fetchall()
-
-            cur.execute("""
-                SELECT t.id, t.template_uuid, t.revision_uuid, t.parent_revision_uuid,
-                       t.name, t.manufacturer, t.version, t.definition_json,
-                       t.created_by_node, t.is_deprecated, t.date_creation, t.date_modification,
-                       COUNT(DISTINCT u.boitier_id) as active_boitiers_count,
-                       COUNT(u.device_name) as active_devices_count,
-                       GROUP_CONCAT(DISTINCT u.boitier_id ORDER BY u.boitier_id SEPARATOR ', ') as using_boitiers,
-                       GROUP_CONCAT(DISTINCT CONCAT(u.boitier_id, ' (', u.device_name, ')') ORDER BY u.boitier_id SEPARATOR ', ') as device_details
-                FROM boitier_modbus_templates t
-                LEFT JOIN boitier_template_usage u ON t.revision_uuid = u.revision_uuid
-                GROUP BY t.id
-                ORDER BY t.name ASC, t.version DESC
-            """)
-            rows = cur.fetchall()
-
-            templates_by_uuid = {}
-            for r in rows:
-                t_uuid = r["template_uuid"]
-                if t_uuid not in templates_by_uuid:
-                    templates_by_uuid[t_uuid] = {
-                        "template_uuid": t_uuid,
-                        "name": r["name"],
-                        "manufacturer": r["manufacturer"] or "",
-                        "revisions": [],
-                        "total_active_boitiers": 0,
-                        "total_active_devices": 0
-                    }
-                try:
-                    def_data = json.loads(r["definition_json"])
-                    reads_count = len(def_data.get("reads", []))
-                except Exception:
-                    def_data = {}
-                    reads_count = 0
-
-                rev_info = dict(r)
-                rev_info["reads_count"] = reads_count
-                rev_info["definition"] = def_data
-                templates_by_uuid[t_uuid]["revisions"].append(rev_info)
-                templates_by_uuid[t_uuid]["total_active_boitiers"] += r["active_boitiers_count"]
-                templates_by_uuid[t_uuid]["total_active_devices"] += r["active_devices_count"]
-
-    finally:
-        db.close()
-
-    templates_data_json = json.dumps(templates_by_uuid, default=str)
-    return template('templates_maintenance',
-                    templates_data_json=templates_data_json,
-                    current_user=current_user,
-                    all_users=all_users,
-                    templates_by_uuid=templates_by_uuid,
-                    format_human_date=format_human_date)
-
-
-@ui_app.get("/maintenance/templates/diff-data")
-def templates_diff_data():
-    rev1_uuid = request.query.get("rev1", "").strip()
-    rev2_uuid = request.query.get("rev2", "").strip()
-    if not rev1_uuid or not rev2_uuid:
-        response.status = 400
-        return {"ok": False, "error": "Les deux révisions sont requises (rev1, rev2)."}
-
-    db = get_db()
-    try:
-        with db.cursor() as cur:
-            cur.execute("SELECT id, name, version, created_by_node, definition_json FROM boitier_modbus_templates WHERE revision_uuid=%s", (rev1_uuid,))
-            r1 = cur.fetchone()
-            cur.execute("SELECT id, name, version, created_by_node, definition_json FROM boitier_modbus_templates WHERE revision_uuid=%s", (rev2_uuid,))
-            r2 = cur.fetchone()
-    finally:
-        db.close()
-
-    if not r1 or not r2:
-        response.status = 404
-        return {"ok": False, "error": "Une ou les deux révisions sont introuvables."}
-
-    try:
-        def1 = json.loads(r1["definition_json"])
-    except Exception:
-        def1 = {}
-    try:
-        def2 = json.loads(r2["definition_json"])
-    except Exception:
-        def2 = {}
-
-    diff = compute_template_diff(def1, def2)
-    return {
-        "ok": True,
-        "diff": diff,
-        "rev1": {
-            "name": r1["name"],
-            "version": r1["version"],
-            "created_by_node": r1["created_by_node"],
-            "reads_count": len(def1.get("reads", []))
-        },
-        "rev2": {
-            "name": r2["name"],
-            "version": r2["version"],
-            "created_by_node": r2["created_by_node"],
-            "reads_count": len(def2.get("reads", []))
-        }
-    }
-
-
-@ui_app.post("/maintenance/templates/toggle_deprecate")
-def templates_toggle_deprecate():
-    data = request.json or {}
-    rev_uuid = (data.get("revision_uuid") or "").strip()
-    if not rev_uuid:
-        response.status = 400
-        return {"ok": False, "error": "revision_uuid requis."}
-
-    db = get_db()
-    try:
-        with db.cursor() as cur:
-            cur.execute("UPDATE boitier_modbus_templates SET is_deprecated = 1 - is_deprecated WHERE revision_uuid = %s", (rev_uuid,))
-            if cur.rowcount == 0:
-                response.status = 404
-                return {"ok": False, "error": "Révision introuvable."}
-    finally:
-        db.close()
-
-    return {"ok": True, "message": "Statut mis à jour."}
-
-
-@ui_app.post("/maintenance/templates/delete")
-def templates_delete():
-    data = request.json or {}
-    rev_uuid = (data.get("revision_uuid") or "").strip()
-    if not rev_uuid:
-        response.status = 400
-        return {"ok": False, "error": "revision_uuid requis."}
-
-    db = get_db()
-    try:
-        with db.cursor() as cur:
-            # Règle de sécurité stricte : vérification qu'aucun boîtier n'utilise cette version
-            cur.execute("""
-                SELECT COUNT(DISTINCT boitier_id) as cnt,
-                       GROUP_CONCAT(DISTINCT boitier_id SEPARATOR ', ') as boitiers
-                FROM boitier_template_usage
-                WHERE revision_uuid = %s
-            """, (rev_uuid,))
-            usage_row = cur.fetchone()
-            active_count = usage_row["cnt"] if usage_row else 0
-            if active_count > 0:
-                response.status = 400
-                return {
-                    "ok": False,
-                    "error": f"Suppression refusée : cette version est activement utilisée par {active_count} boîtier(s) ({usage_row['boitiers']})."
-                }
-
-            cur.execute("DELETE FROM boitier_modbus_templates WHERE revision_uuid = %s", (rev_uuid,))
-            if cur.rowcount == 0:
-                response.status = 404
-                return {"ok": False, "error": "Révision introuvable."}
-    finally:
-        db.close()
-
-    return {"ok": True, "message": "Révision supprimée avec succès."}
+# Import en effet de bord, apres definition de ui_app : chaque module
+# fait `from web.ui import ui_app` puis `@ui_app.get(...)`/`@ui_app.post(...)`
+# pour y enregistrer ses routes.
+from web import stream as _stream  # noqa: E402,F401
+from services import templates_maintenance as _templates_maintenance  # noqa: E402,F401

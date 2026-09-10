@@ -22,7 +22,10 @@ variable, le comportement de production est strictement inchange.
 10 septembre 2026 (refonte, suite) : api.py (1696 lignes) a ete eclate
 en web/api.py (assemblage + routes transverses) et services/*.py
 (fleet, chantiers, sync, trends, logs, headscale), sur le modele
-rpinode. Voir CAHIER-DES-CHARGES-REFONTE.md.
+rpinode. ui.py (1169 lignes) a suivi le meme principe : web/ui.py garde
+l'essentiel des pages, web/stream.py isole les 2 routes SSE, et
+services/templates_maintenance.py isole la maintenance des templates
+Modbus partages. Voir CAHIER-DES-CHARGES-REFONTE.md.
 """
 
 import os
@@ -30,7 +33,7 @@ import os
 from bottle import Bottle
 
 from web.api import api_app
-from ui import ui_app
+from web.ui import ui_app
 
 BASE_PATH = os.environ.get('REPORTS_BASE_PATH', '/reports')
 
