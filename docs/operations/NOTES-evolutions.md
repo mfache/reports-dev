@@ -694,6 +694,7 @@ Portage du moteur de template de `rpinode` (rpi01) vers `reports`.
     - Initialisée avec `marc@fache.be` lié à l'ID 1 (Marc Fache).
     - Migration enregistrée dans `tools/migrations/20260910_add_user_emails.py`.
 - **Auto-enregistrement des nouveaux utilisateurs** : Si un email authentifié via OAuth2 n'est pas reconnu en base, un compte est automatiquement créé avec le statut "En attente" (`cas=0`, `adm=0`). La référence (`ref`) est générée avec le préfixe `WAIT_` suivi d'un hash court pour garantir l'unicité.
+- **Bouton de déconnexion** : Ajout d'un bouton "Déconnexion" dans le header, branché sur `/oauth2-google/sign_out`. Il redirige automatiquement vers l'accueil de l'environnement actuel après déconnexion.
 
 ### Problèmes rencontrés et résolus lors de cette phase
 

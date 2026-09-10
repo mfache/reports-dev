@@ -224,24 +224,33 @@
                 % end
             </nav>
         </div>
-        <div class="user-switcher" hx-boost="false">
-            % if real_user.get('is_admin'):
-                <span style="color: var(--text-muted)">Admin - Switcher :</span>
-                <select onchange="window.location.href='?uid='+this.value">
-                    % for u in all_users:
-                    <option value="{{u['id']}}" {{'selected' if u['id'] == current_user['id'] else ''}}>
-                        {{u['nom']}} ({{'CA' if u['cas'] else ('Admin' if u['adm'] else 'Wait')}})
-                    </option>
-                    % end
-                </select>
-            % else:
-                <span style="color: var(--accent-cyan); font-weight: bold;">
-                    👤 {{current_user.get('nom', 'Inconnu')}}
-                    % if current_user.get('is_wait'):
-                        <span style="color: var(--accent-orange); font-size: 0.8em; margin-left: 5px;">(En attente)</span>
-                    % end
-                </span>
-            % end
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div class="user-switcher" hx-boost="false">
+                % if real_user.get('is_admin'):
+                    <span style="color: var(--text-muted)">Admin - Switcher :</span>
+                    <select onchange="window.location.href='?uid='+this.value">
+                        % for u in all_users:
+                        <option value="{{u['id']}}" {{'selected' if u['id'] == current_user['id'] else ''}}>
+                            {{u['nom']}} ({{'CA' if u['cas'] else ('Admin' if u['adm'] else 'Wait')}})
+                        </option>
+                        % end
+                    </select>
+                % else:
+                    <span style="color: var(--accent-cyan); font-weight: bold;">
+                        👤 {{current_user.get('nom', 'Inconnu')}}
+                        % if current_user.get('is_wait'):
+                            <span style="color: var(--accent-orange); font-size: 0.8em; margin-left: 5px;">(En attente)</span>
+                        % end
+                    </span>
+                % end
+            </div>
+            <a href="/oauth2-google/sign_out?rd={{BASE_PATH}}/" 
+               style="color: #ef4444; text-decoration: none; font-size: 0.85em; border: 1px solid #ef4444; padding: 5px 12px; border-radius: 20px; font-weight: bold; transition: all 0.2s;"
+               onmouseover="this.style.backgroundColor='#ef4444'; this.style.color='#111318';"
+               onmouseout="this.style.backgroundColor='transparent'; this.style.color='#ef4444';"
+               hx-boost="false">
+                Déconnexion
+            </a>
         </div>
     </header>
 
