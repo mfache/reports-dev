@@ -4,6 +4,8 @@ import datetime
 
 from bottle import Bottle, request, response, static_file, template, TEMPLATE_PATH
 from core.database import get_db
+from core.config import BASE_PATH
+from core.paths import VIEWS_DIR, STATIC_DIR
 
 def format_human_date(dt):
     if not dt:
@@ -52,7 +54,7 @@ def _calc_trend(curr, prev):
         return "diff"
 
 ui_app = Bottle()
-TEMPLATE_PATH.append('/var/www/reports/views')
+TEMPLATE_PATH.append(str(VIEWS_DIR))
 
 @ui_app.error(404)
 def error404_ui(error):
@@ -60,12 +62,12 @@ def error404_ui(error):
 
 @ui_app.get("/static/<filepath:path>")
 def serve_static(filepath):
-    return static_file(filepath, root="/var/www/reports/static")
+    return static_file(filepath, root=str(STATIC_DIR))
 
 @ui_app.get("/sw.js")
 def serve_sw():
-    res = static_file("sw.js", root="/var/www/reports/static", mimetype="application/javascript")
-    res.set_header("Service-Worker-Allowed", "/reports/")
+    res = static_file("sw.js", root=str(STATIC_DIR), mimetype="application/javascript")
+    res.set_header("Service-Worker-Allowed", f"{BASE_PATH}/")
     return res
 
 @ui_app.get("/manifest.json")
@@ -74,7 +76,7 @@ def serve_manifest():
     if start:
         import json
         try:
-            with open("/var/www/reports/static/manifest.json", "r") as f:
+            with open(STATIC_DIR / "manifest.json", "r") as f:
                 data = json.load(f)
             data["start_url"] = start
             data["name"] = "Graphique Delta Thermic"
@@ -83,7 +85,7 @@ def serve_manifest():
             return json.dumps(data)
         except Exception:
             pass
-    return static_file("manifest.json", root="/var/www/reports/static", mimetype="application/manifest+json")
+    return static_file("manifest.json", root=str(STATIC_DIR), mimetype="application/manifest+json")
 
 @ui_app.get("/")
 def reports_root():
@@ -470,10 +472,10 @@ def chantier_details(chantier_id):
         db.close()
 
     chart_param = request.query.get("chart")
-    manifest_url = "/reports/manifest.json"
+    manifest_url = f"{BASE_PATH}/manifest.json"
     if chart_param:
-        encoded_start = urllib.parse.quote(f"/reports/chantier/{chantier_id}?chart={chart_param}")
-        manifest_url = f"/reports/manifest.json?start={encoded_start}"
+        encoded_start = urllib.parse.quote(f"{BASE_PATH}/chantier/{chantier_id}?chart={chart_param}")
+        manifest_url = f"{BASE_PATH}/manifest.json?start={encoded_start}"
 
     return template('chantier',
                     current_user=current_user,
@@ -568,10 +570,10 @@ def chantier_graph_view(chantier_id):
     if not chantier:
         return error404_ui(None)
 
-    manifest_url = "/reports/manifest.json"
+    manifest_url = f"{BASE_PATH}/manifest.json"
     if chart_param:
-        encoded_start = urllib.parse.quote(f"/reports/chantier/{chantier_id}/graph?chart={chart_param}")
-        manifest_url = f"/reports/manifest.json?start={encoded_start}"
+        encoded_start = urllib.parse.quote(f"{BASE_PATH}/chantier/{chantier_id}/graph?chart={chart_param}")
+        manifest_url = f"{BASE_PATH}/manifest.json?start={encoded_start}"
 
     return template('chart_view',
                     chantier=chantier,
@@ -646,9 +648,9 @@ def dev():
 <head>
     <meta charset="utf-8">
     <title>Espace Développeur - Delta Thermic</title>
-    <link rel="manifest" href="/reports/manifest.json">
+    <link rel="manifest" href="{BASE_PATH}/manifest.json">
     <meta name="theme-color" content="#0056b3">
-    <link rel="apple-touch-icon" href="/reports/static/dticon.png">
+    <link rel="apple-touch-icon" href="{BASE_PATH}/static/dticon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f9f9f9; color: #333; }}
@@ -746,7 +748,7 @@ def dev():
         resultDiv.innerHTML = '<span style="color: #666;">Exécution en cours...</span>';
 
         try {{
-            const res = await fetch('/reports/sql', {{
+            const res = await fetch('{BASE_PATH}/sql', {{
                 method: 'POST',
                 headers: {{ 'Content-Type': 'application/json' }},
                 body: JSON.stringify({{ query: query }})
@@ -857,9 +859,9 @@ def dev():
                         "reponse": reponse
                     })
         
-        html += """
+        html += f"""
     <h2>📖 Documentation des API Boîtiers</h2>
-    <p>Liste des endpoints disponibles (préfixe <code>/reports/api</code>) pour la communication avec les boîtiers sur le terrain. (<em>Documentation générée automatiquement à partir du code source</em>)</p>
+    <p>Liste des endpoints disponibles (préfixe <code>{BASE_PATH}/api</code>) pour la communication avec les boîtiers sur le terrain. (<em>Documentation générée automatiquement à partir du code source</em>)</p>
 """
         for doc in api_docs:
             color = "#22c55e" if doc["method"] == "GET" else "#eab308"
