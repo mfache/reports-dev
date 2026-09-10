@@ -1,0 +1,22 @@
+{
+  "name": "Delta Thermic Reports",
+  "short_name": "DT Reports",
+  "start_url": "/reports/",
+  "display": "standalone",
+  "background_color": "#121a1f",
+  "theme_color": "#63e2ff",
+  "icons": [
+    {
+      "src": "/reports/static/dticon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/reports/static/dticon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
