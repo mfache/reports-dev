@@ -363,3 +363,63 @@ systématiquement les chemins et préfixes en dur (`grep -n "/var/www/reports\|/
 avant de considérer un module « terminé », l'ancien code n'ayant jamais
 été pensé pour tourner ailleurs qu'à son unique emplacement de
 production historique.
+
+## 10 septembre 2026 (soir) — eclatement d'api.py en web/api.py + services/*.py
+
+Suite de la refonte dans `/opt/reports-dev` (§6 du cahier des charges).
+Le plus gros morceau du monolithe : `api.py` (1696 lignes, 16 routes)
+devient `src/web/api.py` (assemblage, routes transverses `/usage`, hook
+avant-requete, gestion d'erreurs) + 6 modules `src/services/*.py`
+(`fleet`, `chantiers`, `sync`, `trends`, `logs`, `headscale`), chacun
+regroupant les routes d'un domaine et les helpers prives qui ne servent
+qu'a lui (ex. les 7 `_push_*` de `/sync` restent avec `/sync`).
+
+### Choix d'architecture assumé
+
+Par prudence (pas de suite de tests automatisée pour rattraper une
+régression subtile), le découpage sépare **par domaine**, pas encore
+**logique métier vs routage HTTP** comme le visait littéralement le
+critère d'acceptation §9 du cahier des charges (« api.py ne contient plus
+que du routage ») : chaque fonction de route reste telle quelle (ouvre sa
+connexion DB, lit `request.json`/`request.query`, appelle `json_ok`/
+`json_error`), simplement déplacée dans le fichier de son domaine. Aller
+jusqu'à la séparation complète (fonctions de service pures sans `bottle`,
+routage qui ne fait que parser/formater) aurait multiplié le risque de
+régression pour un gain immediat plus faible que « sortir du fichier
+unique de 1696 lignes ». A reconsiderer une fois `tests/` construit
+(objectif 3 du cahier des charges).
+
+### Effet de bord trouvé et corrigé : la page /dev
+
+`ui.py` (onglet « api » de la page `/dev`) faisait `import api` puis
+relisait le code source ligne par ligne pour retrouver le décorateur
+`@api_app.get`/`post` au-dessus de chaque fonction (`inspect.getsourcelines`).
+Cassé mécaniquement par l'éclatement (plus de module `api` unique à
+inspecter). Remplacé par une introspection de `api_app.routes`
+(`route.rule`, `route.method`) : plus robuste, plus simple, et c'est
+exactement le même principe que `global_usage()` utilisait déjà dans
+`api.py` d'origine pour `/usage` — les deux mécanismes de doc auraient
+dû être unifiés depuis longtemps.
+
+### Vérifié
+
+- `py_compile` sur tout le projet.
+- Import réel du module `app` en `sudo -u mariadb` (mêmes droits que le
+  vrai process uwsgi) : 16/16 routes API et 18/18 routes UI présentes,
+  identiques à avant l'éclatement.
+- Appels WSGI directs `GET /ping` et `GET /api/usage` : 200, contenu
+  correct.
+- Page `/dev?tab=api` : mêmes routes documentées qu'avant, **y compris
+  les mêmes trous préexistants** (`headscale_enroll`, `headscale_routes`,
+  `register_auto` utilisaient déjà « Reponse: » sans accent dans leur
+  docstring dans l'ancien `api.py`, donc déjà absents de cette page avant
+  toute refonte — non regressé, juste déplacé tel quel).
+- Test de bout en bout via nginx (`/reports-dev/api/ping`,
+  `/reports-dev/api/usage`, `/reports-dev/sw.js`) après rechargement
+  ciblé (`kill -HUP` sur le PID de `reports-dev` uniquement).
+- PID de `reports` (prod) vérifiés inchangés avant/après.
+
+### Nettoyage connexe
+
+Suppression de `test_api_mqtt.py` (script de debug de 2 lignes,
+`import api` devenu sans objet, plus aucune valeur).
