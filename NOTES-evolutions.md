@@ -514,3 +514,62 @@ valeur explicite connue à l'avance (ici `core.config.BASE_PATH`).
 - Test de bout en bout via nginx après rechargement ciblé (`kill -HUP`
   sur le PID de `reports-dev` uniquement).
 - PID de `reports` (prod) vérifiés inchangés avant/après.
+
+## 11 septembre 2026 — vraie suite de tests pytest, run.sh/run_tests.sh
+
+Objectif 3 du cahier des charges. `tests/` (pytest) remplace les
+anciens scripts de débogage à la racine (`test_bottle_*.py`,
+`test_mount.py`, `test_server.py`, `test_uwsgi.py`, `test_db.py`,
+`test_sync.py` racine) : aucun n'avait d'assertion, juste des `print()`
+à relire à la main. Supprimés.
+
+### Contenu
+
+- `conftest.py` + `_helpers.py` : `call_wsgi()` appelle l'application
+  WSGI **directement**, comme le fait réellement uwsgi (montage complet,
+  hooks Bottle compris) — plus fidèle qu'appeler les fonctions de route
+  une par une. C'est justement l'absence de ce type de test qui a laissé
+  passer l'incident du 10 septembre (UI non montée).
+- `test_wsgi_mount.py` : non-régression directe de cet incident, plus un
+  garde-fou sur le nombre de routes enregistrées (16 API, 18 UI) pour
+  attraper une perte accidentelle lors d'un futur refactor.
+- `test_core_paths.py` : non-régression du bug du 10 septembre soir
+  (`ui.py` servait les fichiers de production).
+- `test_pwa_exemptions.py` : non-régression de l'incident CSRF/Service
+  Worker, plus une vérification que `Service-Worker-Allowed` suit
+  `BASE_PATH` (aurait été figé à `/reports/` sans le fix du 10 septembre).
+- Un fichier par domaine `services/` : couvrent au minimum le refus
+  (401/403) sans authentification ; `test_fleet.py` va plus loin avec un
+  cycle complet d'enregistrement contre `dt_dev` (hostname/cpu_serial
+  uniques par exécution, `dt_dev` ne contenant aucune donnée réelle il
+  n'y a pas besoin de nettoyage après coup).
+
+### run_tests.sh / run.sh
+
+Déduisent le venv et le nom de l'app uwsgi **du nom du dossier courant**
+(`reports-dev` ici → `/opt/venv/reports-dev` + PID
+`/run/uwsgi/app/reports-dev/pid` ; `reports` une fois ce checkout promu
+en production → memes chemins avec "reports") : même convention que les
+fichiers uwsgi déjà en place, donc réutilisables tels quels après
+promotion sans édition manuelle.
+
+`run_tests.sh` doit impérativement s'exécuter en `sudo -u mariadb` :
+`/etc/boitier-fleet/db-dev.env` n'est lisible que par ce compte (mêmes
+droits que le vrai process uwsgi). Lancé en `marc`/`docsadmin`, `core.config`
+eéchoue silencieusement à lire le fichier et retombe sur les identifiants
+par défaut, faisant échouer tous les tests touchant la base de façon
+trompeuse (documentation dans `tests/README.md`).
+
+`run.sh` : `py_compile` puis suite de tests puis, seulement si tout est
+vert, `kill -HUP` ciblé (jamais `service uwsgi ...`). **Vérifié
+manuellement** que le garde-fou fonctionne reellement : un test cassé
+volontairement (erreur à la collection) bloque bien le rechargement,
+message clair affiché, code de sortie non nul, l'app en cours reste
+active et servie normalement pendant l'échec.
+
+### Vérifié
+
+- 32/32 tests passent.
+- Garde-fou de `run.sh` testé en conditions réelles (échec volontaire
+  provoqué puis retiré), `reports-dev` jamais interrompu pendant le test.
+- Prod non touchée.
