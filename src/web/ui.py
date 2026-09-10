@@ -24,7 +24,7 @@ from bottle import Bottle, request, response, static_file, template, TEMPLATE_PA
 
 from core.database import get_db
 from core.config import BASE_PATH
-from core.paths import VIEWS_DIR, STATIC_DIR
+from core.paths import TEMPLATES_DIR, STATIC_DIR
 
 def format_human_date(dt):
     if not dt:
@@ -73,7 +73,7 @@ def _calc_trend(curr, prev):
         return "diff"
 
 ui_app = Bottle()
-TEMPLATE_PATH.append(str(VIEWS_DIR))
+TEMPLATE_PATH.append(str(TEMPLATES_DIR))
 
 @ui_app.error(404)
 def error404_ui(error):

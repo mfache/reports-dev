@@ -18,6 +18,6 @@ from pathlib import Path
 # se trouve la racine du projet (reports ou reports-dev selon l'instance).
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
-VIEWS_DIR = ROOT_DIR / "views"
+TEMPLATES_DIR = ROOT_DIR / "templates"
 STATIC_DIR = ROOT_DIR / "static"
 WEBDAV_DIR = ROOT_DIR / "webdav"

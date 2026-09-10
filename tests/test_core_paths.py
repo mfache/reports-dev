@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from core.paths import ROOT_DIR, STATIC_DIR, VIEWS_DIR
+from core.paths import ROOT_DIR, STATIC_DIR, TEMPLATES_DIR
 
 
 def test_root_dir_correspond_a_ce_checkout():
@@ -17,15 +17,15 @@ def test_root_dir_correspond_a_ce_checkout():
     assert ROOT_DIR == Path(__file__).resolve().parent.parent
 
 
-def test_views_et_static_dir_existent_dans_ce_checkout():
-    assert VIEWS_DIR.is_dir()
+def test_templates_et_static_dir_existent_dans_ce_checkout():
+    assert TEMPLATES_DIR.is_dir()
     assert STATIC_DIR.is_dir()
-    assert (VIEWS_DIR / "layout.tpl").is_file()
+    assert (TEMPLATES_DIR / "layout.tpl").is_file()
 
 
 def test_aucun_chemin_ne_pointe_vers_var_www_reports_en_dev():
     """Si ce test tourne depuis /opt/reports-dev, aucun des chemins ne
     doit designer le dossier de production."""
     if str(ROOT_DIR) == "/opt/reports-dev":
-        assert "/var/www/reports" not in str(VIEWS_DIR)
+        assert "/var/www/reports" not in str(TEMPLATES_DIR)
         assert "/var/www/reports" not in str(STATIC_DIR)
