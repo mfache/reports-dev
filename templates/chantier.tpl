@@ -1,5 +1,4 @@
-% rebase('layout.tpl', title=f"Chantier {chantier['ref']} - Delta Thermic")
-
+% # Page chantier "Poupée Moyenne"
 <style>
     /* Force l'affichage en mode paysage de la fenêtre du graphique quand elle
        est ouverte automatiquement depuis un lien/QR code partagé (voir
@@ -30,7 +29,7 @@
                     title="Supprimer tous les relevés de ce chantier">
                 🗑️ Purger tout le chantier
             </button>
-            <a href="/reports/" class="btn" style="padding: 8px 16px;">&larr; Retour</a>
+            <a href="{{BASE_PATH}}/" class="btn" style="padding: 8px 16px;">&larr; Retour</a>
         </div>
     </div>
 
@@ -67,11 +66,11 @@
         % end
 
     % if boitiers:
-        % include('points_scripts.tpl')
+        % include('points_scripts.tpl', BASE_PATH=BASE_PATH)
         <script>startRealtimeCounts({{chantier['id']}});</script>
 
-        <script src="/reports/static/chart.umd.js"></script>
-        <script src="/reports/static/qrcode.min.js"></script>
+        <script src="{{BASE_PATH}}/static/chart.umd.js"></script>
+        <script src="{{BASE_PATH}}/static/qrcode.min.js"></script>
 
         <!-- Floating Selection Buttons -->
         <div id="floating-selection-btns" style="display: none; position: fixed; bottom: 20px; left: 20px; z-index: 1000; gap: 10px;">
@@ -214,7 +213,7 @@
 
             if (points.length === 0) return null;
 
-            const res = await fetch(`/reports/chantier/{{chantier['id']}}/chart-data`, {
+            const res = await fetch(`{{BASE_PATH}}/chantier/{{chantier['id']}}/chart-data`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(points)
@@ -302,7 +301,7 @@
 
         function initGlobalSSE() {
             if (globalSSE) return;
-            globalSSE = new EventSource(`/reports/chantier/{{chantier['id']}}/reports_sse`);
+            globalSSE = new EventSource(`{{BASE_PATH}}/chantier/{{chantier['id']}}/reports_sse`);
             
             globalSSE.onmessage = async (event) => {
                 // Gestion classique (rafraîchissement graphique)
@@ -439,7 +438,7 @@
                 // Le QR pointe vers une page dediee, minimale (juste le graphique,
                 // sans le tableau ni la navigation), plus adaptee a un usage mobile
                 // rapide sur le terrain.
-                const url = window.location.origin + `/reports/chantier/{{chantier['id']}}/graph` + '?chart=' + encodeURIComponent(chartParam);
+                const url = window.location.origin + `{{BASE_PATH}}/chantier/{{chantier['id']}}/graph` + '?chart=' + encodeURIComponent(chartParam);
 
                 const dataUrl = buildQRCodeDataUrl(url);
                 img.src = dataUrl;

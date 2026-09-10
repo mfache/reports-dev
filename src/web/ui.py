@@ -20,11 +20,12 @@ import json
 import urllib.parse
 import datetime
 
-from bottle import Bottle, request, response, static_file, template, TEMPLATE_PATH
+from bottle import Bottle, request, response, static_file, TEMPLATE_PATH
 
 from core.database import get_db
 from core.config import BASE_PATH
 from core.paths import TEMPLATES_DIR, STATIC_DIR
+from web.templating import render, view, get_current_user
 
 def format_human_date(dt):
     if not dt:
@@ -77,7 +78,7 @@ TEMPLATE_PATH.append(str(TEMPLATES_DIR))
 
 @ui_app.error(404)
 def error404_ui(error):
-    return template('404')
+    return view('404', title='404 - Introuvable')
 
 
 @ui_app.get("/static/<filepath:path>")
@@ -112,18 +113,10 @@ def serve_manifest():
 
 @ui_app.get("/")
 def reports_root():
-    user_id = request.query.get("uid", "1")
+    current_user = get_current_user()
     db = get_db()
     try:
         with db.cursor() as cur:
-            cur.execute("SELECT id, nom, cas, adm FROM utilisateurs WHERE id = %s", (user_id,))
-            current_user = cur.fetchone()
-            if not current_user:
-                return "Utilisateur introuvable."
-
-            cur.execute("SELECT id, nom, cas FROM utilisateurs ORDER BY nom")
-            all_users = cur.fetchall()
-
             cur.execute('''
                 SELECT c.id, c.ref, c.adresse, u.nom as charge_affaires, 
                        GREATEST(c.date_modification, COALESCE(MAX(b.last_sync_at), '2000-01-01')) as date_modification
@@ -165,12 +158,12 @@ def reports_root():
     finally:
         db.close()
 
-    return template('home',
-                    current_user=current_user,
-                    all_users=all_users,
-                    recent_chantiers=recent_chantiers,
-                    my_chantiers=my_chantiers,
-                    other_chantiers=other_chantiers)
+    return view('home',
+                title='Chantiers - Delta Thermic',
+                current_user=current_user,
+                recent_chantiers=recent_chantiers,
+                my_chantiers=my_chantiers,
+                other_chantiers=other_chantiers)
 
 
 @ui_app.post("/chantier/<chantier_id:int>/counts")
@@ -284,21 +277,10 @@ def chantier_chart_data(chantier_id):
 
 
 @ui_app.get("/chantier/<chantier_id:int>")
-
-
 def chantier_details(chantier_id):
-    user_id = request.query.get("uid", "1")
     db = get_db()
     try:
         with db.cursor() as cur:
-            cur.execute("SELECT id, nom, cas, adm FROM utilisateurs WHERE id = %s", (user_id,))
-            current_user = cur.fetchone()
-            if not current_user:
-                return "Utilisateur introuvable."
-
-            cur.execute("SELECT id, nom, cas FROM utilisateurs ORDER BY nom")
-            all_users = cur.fetchall()
-
             cur.execute('''
                 SELECT c.*, u.nom as charge_affaires
                 FROM chantiers c
@@ -382,7 +364,7 @@ def chantier_details(chantier_id):
                         p['trend_dir'] = ""
                     boitiers[p['boitier_id']]['points'].append(p)
 
-# Get aliases for bacnet devices
+            # Get aliases for bacnet devices
             cur.execute('''
                 SELECT device_instance as entry_key, alias as value
                 FROM chantier_bacnet_aliases
@@ -399,13 +381,12 @@ def chantier_details(chantier_id):
         encoded_start = urllib.parse.quote(f"{BASE_PATH}/chantier/{chantier_id}?chart={chart_param}")
         manifest_url = f"{BASE_PATH}/manifest.json?start={encoded_start}"
 
-    return template('chantier',
-                    current_user=current_user,
-                    all_users=all_users,
-                    chantier=chantier,
-                    boitiers=boitiers,
-                    bacnet_aliases=bacnet_aliases,
-                    manifest_url=manifest_url)
+    return view('chantier',
+                title=f"Chantier {chantier['ref']} - Delta Thermic",
+                chantier=chantier,
+                boitiers=boitiers,
+                bacnet_aliases=bacnet_aliases,
+                manifest_url=manifest_url)
 
 
 
@@ -499,25 +480,18 @@ def chantier_graph_view(chantier_id):
         encoded_start = urllib.parse.quote(f"{BASE_PATH}/chantier/{chantier_id}/graph?chart={chart_param}")
         manifest_url = f"{BASE_PATH}/manifest.json?start={encoded_start}"
 
-    return template('chart_view',
-                    chantier=chantier,
-                    chart_param_json=json.dumps(chart_param),
-                    manifest_url=manifest_url)
+    return render('chart_view',
+                chantier=chantier,
+                chart_param_json=json.dumps(chart_param),
+                manifest_url=manifest_url)
 
 
 
 @ui_app.get("/nodes")
 def nodes_view():
-    user_id = request.query.get("uid", "1")
     db = get_db()
     try:
         with db.cursor() as cur:
-            cur.execute("SELECT id, nom, cas, adm FROM utilisateurs WHERE id = %s", (user_id,))
-            current_user = cur.fetchone()
-
-            cur.execute("SELECT id, nom, cas FROM utilisateurs ORDER BY nom")
-            all_users = cur.fetchall()
-
             cur.execute('''
                 SELECT b.id, b.hostname, b.tailscale_name, b.last_sync_at, b.last_ip, c.ref as chantier_ref
                 FROM boitier_registre b
@@ -534,13 +508,12 @@ def nodes_view():
     finally:
         db.close()
 
-    return template('nodes',
-                    current_user=current_user,
-                    all_users=all_users,
-                    boitiers=boitiers,
-                    trends_count=trends_count,
-                    config_count=config_count,
-                    format_human_date=format_human_date)
+    return view('nodes',
+                title='Nodes - Delta Thermic',
+                boitiers=boitiers,
+                trends_count=trends_count,
+                config_count=config_count,
+                format_human_date=format_human_date)
 
 
 @ui_app.post("/sql")
@@ -566,57 +539,30 @@ def execute_sql():
         db.close()
 
 
+@ui_app.post("/dev/sync-db")
+def dev_sync_db():
+    if BASE_PATH == "/reports":
+        response.status = 403
+        return {"error": "Interdit en production."}
+    
+    import subprocess
+    try:
+        cmd = "sudo mysqldump --single-transaction --routines --triggers dt | sudo mysql dt_dev"
+        res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        
+        if res.returncode != 0:
+            return {"error": f"Erreur de synchronisation : {res.stderr}"}
+            
+        return {"status": "ok", "message": "La base de données de développement (dt_dev) a été synchronisée depuis la production."}
+    except Exception as e:
+        return {"error": f"Exception : {str(e)}"}
+
+
 @ui_app.get("/dev")
 def dev():
     tab = request.query.get("tab", "sql")
+    data = {"tab": tab}
     
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Espace Développeur - Delta Thermic</title>
-    <link rel="manifest" href="{BASE_PATH}/manifest.json">
-    <meta name="theme-color" content="#0056b3">
-    <link rel="apple-touch-icon" href="{BASE_PATH}/static/dticon.png">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f9f9f9; color: #333; }}
-        h1, h2 {{ color: #0056b3; }}
-        .mermaid {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; margin-bottom: 30px; display: flex; justify-content: center; }}
-        table {{ border-collapse: collapse; width: 100%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 40px; font-size: 0.9em; }}
-        th, td {{ border: 1px solid #e1e1e1; padding: 10px; text-align: left; }}
-        th {{ background-color: #f2f2f2; font-weight: bold; color: #444; }}
-        tr:nth-child(even) {{ background-color: #fcfcfc; }}
-        code {{ background: #eee; padding: 2px 5px; border-radius: 4px; color: #d63384; font-weight: bold; }}
-
-        .sql-container {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 30px; border-left: 4px solid #0056b3; }}
-        textarea {{ width: 100%; height: 100px; padding: 10px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; box-sizing: border-box; }}
-        button {{ background: #0056b3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }}
-        button:hover {{ background: #004494; }}
-        .error-msg {{ color: #c62828; font-weight: bold; margin-top: 10px; background: #ffebee; padding: 10px; border-radius: 4px; display: inline-block; }}
-        .success-msg {{ color: #2e7d32; font-weight: bold; margin-top: 10px; background: #e8f5e9; padding: 10px; border-radius: 4px; display: inline-block; }}
-        
-        .nav-tabs {{ background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 30px; display: flex; gap: 20px; border-left: 4px solid #0056b3; }}
-        .nav-tabs a {{ text-decoration: none; font-weight: bold; padding-bottom: 5px; transition: color 0.2s; }}
-        .tab-active {{ color: #0056b3; border-bottom: 2px solid #0056b3; }}
-        .tab-inactive {{ color: #666; border-bottom: 2px solid transparent; }}
-        .tab-inactive:hover {{ color: #0056b3; }}
-    </style>
-    <!-- Chargement de Mermaid JS pour rendre le diagramme -->
-    <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
-    </script>
-</head>
-<body>
-    <h1>🛠️ Espace Développeur</h1>
-    
-    <div class="nav-tabs">
-        <a href="?tab=sql" class="{'tab-active' if tab == 'sql' else 'tab-inactive'}">Base de données & SQL</a>
-        <a href="?tab=api" class="{'tab-active' if tab == 'api' else 'tab-inactive'}">Documentation API</a>
-    </div>
-"""
-
     if tab == "sql":
         db = get_db()
         tables_info = {}
@@ -656,115 +602,28 @@ def dev():
                 mermaid_code += f"        {ctype} {col['Field']}{pk}\n"
             mermaid_code += "    }\n"
             
-        html += f"""
-    <h2>🗄️ Structure de la base MariaDB</h2>
-
-    <div class="sql-container">
-        <h2 style="margin-top: 0;">Console SQL</h2>
-        <textarea id="sql-query" placeholder="SELECT * FROM chantiers LIMIT 5;"></textarea>
-        <button onclick="executeSQL()">Exécuter la requête</button>
-        <div id="sql-result" style="margin-top: 15px; overflow-x: auto;"></div>
-    </div>
-
-    <script>
-    async function executeSQL() {{
-        const query = document.getElementById('sql-query').value.trim();
-        const resultDiv = document.getElementById('sql-result');
-        if (!query) return;
-
-        resultDiv.innerHTML = '<span style="color: #666;">Exécution en cours...</span>';
-
-        try {{
-            const res = await fetch('{BASE_PATH}/sql', {{
-                method: 'POST',
-                headers: {{ 'Content-Type': 'application/json' }},
-                body: JSON.stringify({{ query: query }})
-            }});
-
-            const data = await res.json();
-
-            if (data.error) {{
-                resultDiv.innerHTML = `<div class="error-msg">❌ Erreur : ${{data.error}}</div>`;
-            }} else if (data.message) {{
-                resultDiv.innerHTML = `<div class="success-msg">✅ ${{data.message}}</div>`;
-            }} else if (data.columns && data.rows) {{
-                if (data.rows.length === 0) {{
-                    resultDiv.innerHTML = '<span style="color: #666;">Requête exécutée : 0 résultat.</span>';
-                }} else {{
-                    let tableHtml = '<table><thead><tr>';
-                    data.columns.forEach(col => {{
-                        tableHtml += `<th>${{col}}</th>`;
-                    }});
-                    tableHtml += '</tr></thead><tbody>';
-
-                    data.rows.forEach(row => {{
-                        tableHtml += '<tr>';
-                        data.columns.forEach(col => {{
-                            let val = row[col];
-                            if (val === null) val = '<span style="color: #aaa; font-style: italic;">NULL</span>';
-                            tableHtml += `<td>${{val}}</td>`;
-                        }});
-                        tableHtml += '</tr>';
-                    }});
-
-                    tableHtml += '</tbody></table>';
-                    resultDiv.innerHTML = `<div class="success-msg" style="margin-bottom: 10px;">✅ ${{data.rows.length}} ligne(s) récupérée(s).</div>` + tableHtml;
-                }}
-            }}
-        }} catch (e) {{
-            resultDiv.innerHTML = `<div class="error-msg">❌ Erreur réseau ou de parsing : ${{e.message}}</div>`;
-        }}
-    }}
-    </script>
-
-    <p>Aperçu généré dynamiquement du schéma de base de données.</p>
-
-    <h2>Diagramme Entité-Association (ER)</h2>
-    <div class="mermaid">
-{mermaid_code}
-    </div>
-
-    <h2>Détail des tables ({len(tables)})</h2>
-"""
-        for table, cols in tables_info.items():
-            html += f"<h3>Table : <code>{table}</code></h3><table><tr><th>Champ</th><th>Type</th><th>Null</th><th>Clé</th><th>Défaut</th><th>Extra</th></tr>"
-            for col in cols:
-                html += f"<tr><td>{col['Field']}</td><td style='font-family: monospace;'>{col['Type']}</td><td>{col['Null']}</td><td><strong>{col['Key']}</strong></td><td>{col['Default']}</td><td><span style='color: #888; font-size: 0.9em;'>{col['Extra']}</span></td></tr>"
-            html += "</table>"
+        data.update({
+            "tables": tables,
+            "tables_info": tables_info,
+            "mermaid_code": mermaid_code
+        })
             
     elif tab == "api":
         from web.api import api_app
-
-        # Extraction dynamique de la documentation des API a partir du
-        # registre de routes Bottle (api_app.routes). Avant la refonte du
-        # 10 septembre 2026, ce bloc faisait `import api` puis relisait le
-        # code source de ce fichier monolithique pour retrouver, ligne par
-        # ligne, le decorateur @api_app.get/post au-dessus de chaque
-        # fonction. Casse par l'eclatement d'api.py en web/api.py +
-        # services/*.py (plus de module `api` unique a inspecter).
-        # api_app.routes expose directement route.rule et route.method,
-        # plus robuste et plus simple que le parsing de source.
         api_docs = []
         for route in api_app.routes:
             obj = route.callback
             if not (obj and hasattr(obj, '__doc__') and obj.__doc__):
                 continue
             doc = obj.__doc__.strip()
-            # On ne prend que les fonctions qui ont été décorées comme routes (on cherche une description dans la docstring)
             if "Réponse:" in doc:
                 # Extraction basique des différentes parties
                 desc = doc.split("Usage:")[0].split("Headers:")[0].split("Payload:")[0].strip()
-                usage = ""
-                if "Usage:" in doc:
-                    usage = doc.split("Usage:")[1].split("Réponse:")[0].strip()
-                payload = ""
-                if "Payload:" in doc:
-                    payload = doc.split("Payload:")[1].split("Réponse:")[0].strip()
-                    if "Headers:" in payload:
-                        payload = payload.split("Headers:")[0].strip()
-                headers = ""
-                if "Headers:" in doc:
-                    headers = doc.split("Headers:")[1].split("Payload:")[0].split("Usage:")[0].split("Réponse:")[0].strip()
+                usage = doc.split("Usage:")[1].split("Réponse:")[0].strip() if "Usage:" in doc else ""
+                payload = doc.split("Payload:")[1].split("Réponse:")[0].strip() if "Payload:" in doc else ""
+                if payload and "Headers:" in payload:
+                    payload = payload.split("Headers:")[0].strip()
+                headers = doc.split("Headers:")[1].split("Payload:")[0].split("Usage:")[0].split("Réponse:")[0].strip() if "Headers:" in doc else ""
                 reponse = doc.split("Réponse:")[1].strip()
 
                 api_docs.append({
@@ -776,52 +635,16 @@ def dev():
                     "usage": usage,
                     "reponse": reponse
                 })
-        
-        html += f"""
-    <h2>📖 Documentation des API Boîtiers</h2>
-    <p>Liste des endpoints disponibles (préfixe <code>{BASE_PATH}/api</code>) pour la communication avec les boîtiers sur le terrain. (<em>Documentation générée automatiquement à partir du code source</em>)</p>
-"""
-        for doc in api_docs:
-            color = "#22c55e" if doc["method"] == "GET" else "#eab308"
-            html += f"""
-    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 4px solid {color};">
-        <h3 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
-            <code style="background: {color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">{doc['method']}</code>
-            <strong>{doc['endpoint']}</strong>
-        </h3>
-        <p style="margin-bottom: 20px;">{doc['desc'].replace(chr(10), '<br>')}</p>
-"""
-            if doc['headers']:
-                html += f"""
-        <div style="margin-bottom: 15px;">
-            <strong>Headers attendus :</strong>
-            <pre style="background: #f1f5f9; padding: 10px; border-radius: 4px; overflow-x: auto; margin-top: 5px; font-size: 0.9em;">{doc['headers']}</pre>
-        </div>"""
-            if doc['usage']:
-                html += f"""
-        <div style="margin-bottom: 15px;">
-            <strong>Exemple d'usage :</strong>
-            <pre style="background: #f1f5f9; padding: 10px; border-radius: 4px; overflow-x: auto; margin-top: 5px; font-size: 0.9em;">{doc['usage']}</pre>
-        </div>"""
-            if doc['payload']:
-                html += f"""
-        <div style="margin-bottom: 15px;">
-            <strong>Exemple de Payload JSON :</strong>
-            <pre style="background: #f1f5f9; padding: 10px; border-radius: 4px; overflow-x: auto; margin-top: 5px; font-size: 0.9em;">{doc['payload']}</pre>
-        </div>"""
-            if doc['reponse']:
-                html += f"""
-        <div>
-            <strong>Exemple de Réponse :</strong>
-            <pre style="background: #f1f5f9; padding: 10px; border-radius: 4px; overflow-x: auto; margin-top: 5px; font-size: 0.9em;">{doc['reponse']}</pre>
-        </div>"""
-                
-            html += "</div>"
+        data["api_docs"] = api_docs
 
-    html += """
-</body>
-</html>"""
-    return html
+    elif tab == "env":
+        import os
+        data["env_vars"] = sorted(os.environ.items())
+        # Ajout des infos d'identité détectées
+        data["auth_email"] = request.environ.get('X_EMAIL', 'Non détecté')
+        data["auth_user"] = request.environ.get('X_USER', 'Non détecté')
+
+    return view('dev', title='Espace Développeur', **data)
 
 
 # Import en effet de bord, apres definition de ui_app : chaque module

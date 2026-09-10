@@ -1,3 +1,4 @@
+% # Page Graphique Standalone "Poupée Moyenne" (sans layout)
 <!DOCTYPE html>
 <html lang="fr" class="dark">
 <head>
@@ -5,7 +6,7 @@
     <title>Graphique {{chantier['ref']}} - Delta Thermic</title>
     <link rel="manifest" href="{{manifest_url}}">
     <meta name="theme-color" content="#171a21">
-    <link rel="apple-touch-icon" href="/reports/static/dticon.png">
+    <link rel="apple-touch-icon" href="{{BASE_PATH}}/static/dticon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <style>
         :root {
@@ -112,7 +113,7 @@
     <div id="app">
         <header>
             <h1>📈 {{chantier['ref']}}</h1>
-            <a href="/reports/chantier/{{chantier['id']}}">Voir tous les points &rarr;</a>
+            <a href="{{BASE_PATH}}/chantier/{{chantier['id']}}">Voir tous les points &rarr;</a>
         </header>
         <div id="chart-wrap">
             <canvas id="trendChart"></canvas>
@@ -128,7 +129,7 @@
         </footer>
     </div>
 
-    <script src="/reports/static/chart.umd.js"></script>
+    <script src="{{BASE_PATH}}/static/chart.umd.js"></script>
     <script>
         const chantierId = {{chantier['id']}};
         const chartParam = {{!chart_param_json}};
@@ -147,7 +148,7 @@
 
         async function fetchChartData() {
             if (points.length === 0) return null;
-            const res = await fetch(`/reports/chantier/${chantierId}/chart-data`, {
+            const res = await fetch(`{{BASE_PATH}}/chantier/${chantierId}/chart-data`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(points)
@@ -228,7 +229,7 @@
         }
 
         renderChart().then(() => {
-            const chartSSE = new EventSource(`/reports/chantier/${chantierId}/reports_sse`);
+            const chartSSE = new EventSource(`{{BASE_PATH}}/chantier/${chantierId}/reports_sse`);
             chartSSE.onmessage = async (event) => {
                 // Gestion classique pour le graphique
                 if (event.data === 'update') {
@@ -284,7 +285,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/reports/sw.js', { scope: '/reports/' });
+                navigator.serviceWorker.register('{{BASE_PATH}}/sw.js', { scope: '{{BASE_PATH}}/' });
             });
         }
     </script>

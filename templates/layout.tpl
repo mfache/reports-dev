@@ -1,20 +1,14 @@
-% import bottle
-% from core.config import BASE_PATH
-% is_htmx = bottle.request.headers.get('HX-Request') == 'true'
-% if is_htmx:
-    <title>{{ get('title', 'Delta Thermic') }}</title>
-    {{!base}}
-% else:
+% # Layout global "Grande Poupée"
 <!DOCTYPE html>
 <html lang="fr" class="dark">
 <head>
     <meta charset="utf-8">
     <title>{{ get('title', 'Chantiers - Delta Thermic') }}</title>
-    <link rel="manifest" href="{{get('manifest_url', '/reports/manifest.json')}}">
+    <link rel="manifest" href="{{get('manifest_url', BASE_PATH + '/manifest.json')}}">
     <meta name="theme-color" content="#171a21">
-    <link rel="apple-touch-icon" href="/reports/static/dticon.png">
+    <link rel="apple-touch-icon" href="{{BASE_PATH}}/static/dticon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="/reports/static/htmx.min.js"></script>
+    <script src="{{BASE_PATH}}/static/htmx.min.js"></script>
     <style>
         :root {
             --bg-color: #171a21; --header-bg: #111318; --card-bg: #222631;
@@ -166,39 +160,89 @@
 </head>
 <body hx-boost="true" hx-target="#main-content" hx-swap="innerHTML transition:true">
     % if BASE_PATH != '/reports':
-    <div style="background:#f59e0b; color:#171a21; text-align:center; font-weight:700; padding:6px; letter-spacing:1px;">
-        ENVIRONNEMENT DE DEV — base dt_dev, jamais la production
+    <div id="dev-banner" style="background:#f59e0b; color:#171a21; text-align:center; font-weight:700; padding:6px; letter-spacing:1px; display:flex; align-items:center; justify-content:center; gap:15px; flex-wrap:wrap;">
+        <span>ENVIRONNEMENT DE DEV — base dt_dev, jamais la production</span>
+        <button id="sync-prod-db-btn" onclick="syncProdDb()" style="background:#171a21; color:#f59e0b; border:none; padding:4px 10px; font-weight:700; border-radius:4px; cursor:pointer; font-size:0.85em; display:inline-flex; align-items:center; gap:5px; transition: opacity 0.2s;">
+            🔄 Synchroniser depuis Prod
+        </button>
     </div>
+    <script>
+    async function syncProdDb() {
+        if (!confirm("⚠️ ATTENTION : Cette action va écraser TOUTES les données de la base de développement (dt_dev) par celles de la production. Êtes-vous sûr de vouloir continuer ?")) {
+            return;
+        }
+        const btn = document.getElementById('sync-prod-db-btn');
+        if (!btn) return;
+
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.innerHTML = '⏳ Synchronisation...';
+
+        try {
+            const res = await fetch('{{BASE_PATH}}/dev/sync-db', {
+                method: 'POST'
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                alert('✅ ' + data.message);
+                window.location.reload();
+            } else {
+                alert('❌ Erreur : ' + (data.error || 'Une erreur inconnue est survenue.'));
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerHTML = originalText;
+            }
+        } catch (e) {
+            alert('❌ Erreur réseau : ' + e.message);
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.innerHTML = originalText;
+        }
+    }
+    </script>
     % end
     <div id="network-triangle" title="Connexion établie (En ligne)"></div>
     <header>
         <div style="display: flex; align-items: center; gap: 30px;">
             <h1>
-                <a href="/reports" style="display:flex; align-items:center; gap:5px; text-decoration: none;">
+                <a href="{{BASE_PATH}}/" style="display:flex; align-items:center; gap:5px; text-decoration: none;">
                     <span class="logo-text-delta">DELTA</span><span class="logo-text-thermic">THERMIC</span>
                 </a>
                 <span id="sse_api_activity" style="display:inline-block; width:10px; height:10px; background-color:#334155; border-radius:50%; margin-left:10px; transition:background-color 0.2s, box-shadow 0.2s;" title="Témoin d'activité de l'API"></span>
                 <span class="htmx-indicator" style="font-size:0.5em; margin-left: 10px;">⏳</span>
             </h1>
             <nav style="display: flex; gap: 20px; padding-top: 4px;">
-                <a href="/reports/" style="color: var(--accent-cyan); font-weight: bold; text-decoration: none; font-size: 1.1em;">Accueil</a>
-                <a href="/reports/nodes" style="color: var(--accent-cyan); font-weight: bold; text-decoration: none; font-size: 1.1em;">Nodes</a>
-                <a href="/reports/maintenance/templates" style="color: var(--accent-cyan); font-weight: bold; text-decoration: none; font-size: 1.1em;">Templates</a>
-                <a href="/reports/dev" style="color: var(--accent-cyan); font-weight: bold; text-decoration: none; font-size: 1.1em;">Dev</a>
+                % if not current_user.get('is_wait'):
+                <a href="{{BASE_PATH}}/" style="color: var(--accent-cyan); font-weight: bold; text-decoration: none; font-size: 1.1em;">Accueil</a>
+                <a href="{{BASE_PATH}}/nodes" style="color: var(--accent-cyan); font-weight: bold; text-decoration: none; font-size: 1.1em;">Nodes</a>
+                % end
+                
+                % if current_user.get('is_admin'):
+                <a href="{{BASE_PATH}}/maintenance/templates" style="color: var(--accent-cyan); font-weight: bold; text-decoration: none; font-size: 1.1em;">Templates</a>
+                <a href="{{BASE_PATH}}/dev" style="color: var(--accent-cyan); font-weight: bold; text-decoration: none; font-size: 1.1em;">Dev</a>
+                % end
             </nav>
         </div>
-        % if defined('current_user') and defined('all_users'):
         <div class="user-switcher" hx-boost="false">
-            <span style="color: var(--text-muted)">Connecté en tant que :</span>
-            <select onchange="window.location.href='?uid='+this.value">
-                % for u in all_users:
-                <option value="{{u['id']}}" {{'selected' if u['id'] == current_user['id'] else ''}}>
-                    {{u['nom']}} ({{'CA' if u['cas'] else 'Admin/Tech'}})
-                </option>
-                % end
-            </select>
+            % if real_user.get('is_admin'):
+                <span style="color: var(--text-muted)">Admin - Switcher :</span>
+                <select onchange="window.location.href='?uid='+this.value">
+                    % for u in all_users:
+                    <option value="{{u['id']}}" {{'selected' if u['id'] == current_user['id'] else ''}}>
+                        {{u['nom']}} ({{'CA' if u['cas'] else ('Admin' if u['adm'] else 'Wait')}})
+                    </option>
+                    % end
+                </select>
+            % else:
+                <span style="color: var(--accent-cyan); font-weight: bold;">
+                    👤 {{current_user.get('nom', 'Inconnu')}}
+                    % if current_user.get('is_wait'):
+                        <span style="color: var(--accent-orange); font-size: 0.8em; margin-left: 5px;">(En attente)</span>
+                    % end
+                </span>
+            % end
         </div>
-        % end
     </header>
 
     <div id="main-content">
@@ -208,7 +252,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/reports/sw.js', { scope: '/reports/' });
+          navigator.serviceWorker.register('{{BASE_PATH}}/sw.js', { scope: '{{BASE_PATH}}/' });
         });
       }
 
@@ -234,8 +278,8 @@
       let globalAppSSE = null;
       function initGlobalAppSSE() {
           if (globalAppSSE) return;
-          globalAppSSE = new EventSource('/reports/reports_sse');
-          
+          globalAppSSE = new EventSource('{{BASE_PATH}}/reports_sse');
+
           globalAppSSE.onmessage = (event) => {
               try {
                   const payload = JSON.parse(event.data);
@@ -256,9 +300,8 @@
               }
           };
       }
-      
+
       initGlobalAppSSE();
     </script>
 </body>
 </html>
-% end

@@ -672,3 +672,55 @@ pour ne plus affirmer l'absence de vraies données dans `dt_dev`.
 naturellement de la production au fil des tests (c'est le but). La
 resynchroniser au besoin par le même processus (étapes 2-3
 ci-dessus).
+
+## 10 septembre 2026 (fin de journée) — système « poupée russe », dynamisation des URLs et emails utilisateurs
+
+### Système de Template « Poupée Russe »
+Portage du moteur de template de `rpinode` (rpi01) vers `reports`.
+- Création de `src/web/templating.py` : centralise la logique de rendu et gère l'emboîtement automatique (Layout > Page > Fragment).
+- Support HTMX natif : les requêtes avec le header `HX-Request` ne reçoivent plus que le fragment HTML utile (accélération de la navigation et économie de bande passante).
+- Injection automatique des variables globales (`BASE_PATH`, `current_user`, `all_users`) dans tous les templates, simplifiant drastiquement les contrôleurs dans `ui.py`.
+- Suppression des `% rebase` dans les templates individuels au profit d'un emboîtement piloté par le Python.
+
+### Dynamisation des URLs
+- Éradication des chemins codés en dur (`/reports/`) dans tous les templates et scripts JS.
+- Utilisation systématique de la variable `BASE_PATH` (configurable via `REPORTS_BASE_PATH`) pour garantir la portabilité totale du code entre `/reports` (prod) et `/reports-dev` (dev).
+- Ajout de l'onglet **Environnement** dans l'espace `/dev` pour inspecter les variables d'environnement du processus.
+
+### Identification et Emails utilisateurs
+- Confirmation de la source de vérité pour l'accès OAuth2 : la liste blanche se trouve dans `/etc/oauth2-proxy/authorized_emails_google.txt` (vérifié : contient uniquement `marc@fache.be`).
+- Création de la table `utilisateurs_emails` dans MariaDB (appliqué sur `dt` et `dt_dev`) :
+    - Permet de lier plusieurs adresses email à un même utilisateur (support des alias).
+    - Initialisée avec `marc@fache.be` lié à l'ID 1 (Marc Fache).
+    - Migration enregistrée dans `tools/migrations/20260910_add_user_emails.py`.
+- **Auto-enregistrement des nouveaux utilisateurs** : Si un email authentifié via OAuth2 n'est pas reconnu en base, un compte est automatiquement créé avec le statut "En attente" (`cas=0`, `adm=0`). La référence (`ref`) est générée avec le préfixe `WAIT_` suivi d'un hash court pour garantir l'unicité.
+
+### Problèmes rencontrés et résolus lors de cette phase
+
+#### 1. Piège de l'environnement DB par défaut
+- **Problème** : La première exécution du script de migration `20260910_add_user_emails.py` a ciblé la base de production (`dt`) alors que je travaillais dans `/opt/reports-dev`. Le fichier `/etc/boitier-fleet/db.env` est lu par défaut si `DB_ENV_FILE` n'est pas spécifié.
+- **Résolution** : Identification immédiate via `SHOW TABLES`. Application manuelle à la base de dev via `sudo -u mariadb env DB_ENV_FILE=/etc/boitier-fleet/db-dev.env python3 ...`.
+- **Leçon** : Toujours expliciter le fichier d'environnement lors de l'exécution de scripts de maintenance en mode "double instance".
+
+#### 2. Régressions lors de l'abandon de `% rebase`
+- **Problème** : Le passage au helper `view()` a provoqué des `NameError` dans `services/templates_maintenance.py` (variables manquantes et imports `request`/`response` oubliés après nettoyage).
+- **Résolution** : Détection rapide par `./run.sh` (échec des tests de maintenance). Correction des imports et remise en place du `json.dumps` nécessaire avant l'appel à la vue.
+- **Leçon** : Ne jamais présumer qu'un nettoyage "cosmétique" est anodin. La suite de tests a ici parfaitement joué son rôle de filet de sécurité.
+
+#### 3. Accès documentaire sur `rpi01`
+- **Problème** : Nécessité de consulter la définition exacte du système "poupée russe" sur une machine distante (`rpi01`).
+- **Résolution** : Utilisation de `ssh docsadmin@rpi01` combiné à `sudo` pour lire `src/web/templating.py` et les fichiers `.md` locaux.
+- **Leçon** : L'accès `docsadmin` est vital pour maintenir la cohérence entre le serveur maître et les boîtiers de terrain.
+
+#### 4. Distinction entre identité réelle et simulée (Admin Switcher)
+- **Problème** : Après avoir implémenté le switcher d'utilisateur pour l'admin, le menu disparaissait dès qu'on switchait vers un utilisateur non-admin. Le système considérait que l'utilisateur actuel n'avait plus les droits de voir le switcher.
+- **Résolution** : Séparation de la logique de résolution en deux entités : `real_user` (déterminé par l'email OAuth2) et `current_user` (celui simulé par `?uid=X`). Le layout utilise désormais `real_user.is_admin` pour maintenir l'affichage des outils d'administration et du switcher, quel que soit le profil simulé.
+- **Leçon** : Toujours conserver une trace de l'identité forte (authentifiée) pour ne pas s'enfermer dans un rôle simulé dont on ne peut plus sortir.
+
+#### 5. Conflit de priorité entre Email et UID
+- **Problème** : L'email OAuth2 était prioritaire sur le paramètre `uid`, rendant le switcher inopérant pour l'administrateur authentifié.
+- **Résolution** : Inversion de la priorité uniquement pour les administrateurs : si un `uid` est présent dans l'URL et que l'utilisateur authentifié est Admin, le `uid` prend le dessus pour la session de rendu.
+
+### Vérifié
+- `./run.sh` : 33/33 tests passés avec succès.
+- Rechargement uwsgi effectué : les nouvelles fonctionnalités sont actives sur `/reports-dev`.

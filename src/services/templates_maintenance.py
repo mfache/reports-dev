@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import json
 
-from bottle import request, response, template
-
+from bottle import request, response
 from core.database import get_db
+from web.templating import view, render
 from web.ui import ui_app, format_human_date
 
 def compute_template_diff(def1, def2):
@@ -167,12 +167,13 @@ def templates_maintenance_view():
         db.close()
 
     templates_data_json = json.dumps(templates_by_uuid, default=str)
-    return template('templates_maintenance',
-                    templates_data_json=templates_data_json,
-                    current_user=current_user,
-                    all_users=all_users,
-                    templates_by_uuid=templates_by_uuid,
-                    format_human_date=format_human_date)
+    return view('templates_maintenance',
+                title='Maintenance des Templates - Delta Thermic',
+                templates_data_json=templates_data_json,
+                current_user=current_user,
+                all_users=all_users,
+                templates_by_uuid=templates_by_uuid,
+                format_human_date=format_human_date)
 
 
 @ui_app.get("/maintenance/templates/diff-data")

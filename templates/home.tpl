@@ -1,12 +1,11 @@
-% rebase('layout.tpl', title='Chantiers - Delta Thermic', current_user=current_user, all_users=all_users)
-
+% # Page d'accueil "Poupée Moyenne"
 <div class="container">
     <h1 style="color: var(--text-main); font-size: 1.8em; margin-top: 20px; margin-bottom: 30px;">Accueil - Liste des chantiers</h1>
 
     <h2>Chantiers Récents</h2>
     <div class="grid">
         % for c in recent_chantiers:
-        <a href="/reports/chantier/{{c['id']}}" class="card card-recent">
+        <a href="{{BASE_PATH}}/chantier/{{c['id']}}" class="card card-recent">
             <h3><span class="chantier-ref">{{c['ref']}}</span> <span class="badge-recent">Actif</span></h3>
             <p>📍 {{c['adresse'] or 'Adresse non renseignée'}}</p>
             <p>👤 {{c['charge_affaires'] or 'Non assigné'}}</p>
@@ -23,7 +22,7 @@
     <div class="grid">
         % if my_chantiers:
             % for c in my_chantiers:
-            <a href="/reports/chantier/{{c['id']}}" class="card">
+            <a href="{{BASE_PATH}}/chantier/{{c['id']}}" class="card">
                 <h3><span class="chantier-ref">{{c['ref']}}</span></h3>
                 <p>📍 {{c['adresse'] or 'Adresse non renseignée'}}</p>
                 <div class="meta">
@@ -41,7 +40,7 @@
     <div class="grid">
         % if other_chantiers:
             % for c in other_chantiers:
-            <a href="/reports/chantier/{{c['id']}}" class="card">
+            <a href="{{BASE_PATH}}/chantier/{{c['id']}}" class="card">
                 <h3><span class="chantier-ref">{{c['ref']}}</span></h3>
                 <p>📍 {{c['adresse'] or 'Adresse non renseignée'}}</p>
                 <p>👤 {{c['charge_affaires'] or 'Non assigné'}}</p>

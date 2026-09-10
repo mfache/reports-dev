@@ -342,6 +342,8 @@ reports/
       ne courir aucun risque avant que la copie de travail soit validée.
 - [x] `README.md` (11 septembre 2026) permet de comprendre l'architecture,
       lancer les tests et redémarrer en sécurité, sans lire le code.
+- [x] Système de template « Poupée Russe » implémenté (`src/web/templating.py`). Support HTMX, injection automatique des variables globales et suppression de la dépendance ascendante (`rebase`) dans les templates.
+- [x] Dynamisation complète des URLs : plus aucun chemin `/reports/` en dur. Support du changement de préfixe via `REPORTS_BASE_PATH`.
 - [ ] Toutes les URLs externes existantes répondent à l'identique
       (vérifié en navigateur réel, session OAuth incluse, PWA installée
       incluse). **Reste à faire par un humain** avant toute bascule en

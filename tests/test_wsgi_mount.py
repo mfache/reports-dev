@@ -35,5 +35,12 @@ def test_nombre_de_routes_api_inchange(wsgi_app):
 
 def test_nombre_de_routes_ui_inchange(wsgi_app):
     import app as app_module
-    # Idem pour ui_app : 18 routes au moment de l'eclatement d'ui.py.
-    assert len(app_module.ui_app.routes) == 18
+    # Idem pour ui_app : 19 routes après ajout du bouton de synchronisation.
+    assert len(app_module.ui_app.routes) == 19
+
+def test_dev_sync_db_route_repond(wsgi_app, base_path):
+    status, _, body = call_wsgi(wsgi_app, f"{base_path}/dev/sync-db", method="POST")
+    assert status == "200 OK"
+    import json
+    data = json.loads(body)
+    assert "status" in data or "error" in data

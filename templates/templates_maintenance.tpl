@@ -1,4 +1,4 @@
-% rebase('layout.tpl', title='Maintenance des Templates - Delta Thermic')
+% # Page Maintenance Templates "Poupée Moyenne"
 <div class="container" style="max-width: 1300px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
         <div>
@@ -184,7 +184,7 @@ function showAlert(msg, isError = false) {
 
 async function toggleDeprecate(revUuid) {
     try {
-        const res = await fetch('/reports/maintenance/templates/toggle_deprecate', {
+        const res = await fetch('{{BASE_PATH}}/maintenance/templates/toggle_deprecate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ revision_uuid: revUuid })
@@ -205,7 +205,7 @@ async function deleteRevision(revUuid, label) {
         return;
     }
     try {
-        const res = await fetch('/reports/maintenance/templates/delete', {
+        const res = await fetch('{{BASE_PATH}}/maintenance/templates/delete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ revision_uuid: revUuid })
@@ -264,7 +264,7 @@ async function runDiff() {
     container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted);">Calcul du diff en cours...</div>';
 
     try {
-        const res = await fetch(`/reports/maintenance/templates/diff-data?rev1=${rev1}&rev2=${rev2}`);
+        const res = await fetch(`{{BASE_PATH}}/maintenance/templates/diff-data?rev1=${rev1}&rev2=${rev2}`);
         const data = await res.json();
         if (data.ok) {
             currentDiffData = data;

@@ -25,7 +25,7 @@ function onDeviceFilterChange(hostnameSafe) {
 
 async function executePurge(chantierId, payload, targetLabel) {
     try {
-        const res = await fetch(`/reports/chantier/${chantierId}/purge`, {
+        const res = await fetch(`{{BASE_PATH}}/chantier/${chantierId}/purge`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -119,7 +119,7 @@ function startRealtimeCounts(chantierId) {
 
     setInterval(async () => {
         try {
-            const res = await fetch(`/reports/chantier/${chantierId}/counts`, {
+            const res = await fetch(`{{BASE_PATH}}/chantier/${chantierId}/counts`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(knownCounts)
