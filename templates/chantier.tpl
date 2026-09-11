@@ -285,36 +285,37 @@
             });
         }
 
-        let globalSSE = null;
         function initGlobalSSE() {
-            if (globalSSE) return;
-            globalSSE = new EventSource(`{{BASE_PATH}}/chantier/{{chantier['id']}}/reports_sse`);
-            globalSSE.onmessage = async (event) => {
-                if (event.data === 'update') {
+            // Le SSE est désormais géré de façon centralisée par SSEPointManager (dans points_scripts.tpl)
+            // On s'abonne simplement aux événements DOM qu'il émet.
+            window.addEventListener('sse:message', async (event) => {
+                const data = event.detail;
+                if (data === 'update') {
                     const modal = document.getElementById('chart-modal');
                     if (modal && modal.style.display !== 'none' && chartInstance) {
-                        const data = await fetchChartData();
-                        if (!data || !data.datasets) return;
+                        const newData = await fetchChartData();
+                        if (!newData || !newData.datasets) return;
                         const ind = document.getElementById('chart-refresh-indicator');
                         if (ind) { ind.style.opacity = '1'; setTimeout(() => ind.style.opacity = '0', 500); }
-                        for (let i = 0; i < data.datasets.length; i++) {
-                            if (chartInstance.data.datasets[i]) chartInstance.data.datasets[i].data = data.datasets[i].data;
+                        for (let i = 0; i < newData.datasets.length; i++) {
+                            if (chartInstance.data.datasets[i]) chartInstance.data.datasets[i].data = newData.datasets[i].data;
                         }
                         chartInstance.update('none');
                     }
                     return;
                 }
-                try {
-                    const payload = JSON.parse(event.data);
-                    for (const [key, value] of Object.entries(payload)) {
+                
+                // Gestion des injections automatiques (sse_...)
+                if (typeof data === 'object') {
+                    for (const [key, value] of Object.entries(data)) {
                         if (key.startsWith('sse_')) {
                             const elById = document.getElementById(key);
                             if (elById) elById.innerHTML = value;
                             document.querySelectorAll(`.${key}`).forEach(el => el.innerHTML = value);
                         }
                     }
-                } catch (e) {}
-            };
+                }
+            });
         }
 
         async function openChartModal() {

@@ -5,9 +5,10 @@ lors de la refonte (voir CAHIER-DES-CHARGES-REFONTE.md)."""
 from __future__ import annotations
 
 import queue
+import uuid
 
 import paho.mqtt.client as mqtt
-from bottle import response
+from bottle import response, request
 
 from web.ui import ui_app
 
@@ -60,10 +61,18 @@ def chantier_sse(chantier_id):
     """
     Server-Sent Events endpoint to notify clients when new data is available.
     Subscribes to the local MQTT broker and proxies messages to the client.
+    Handles UUID-based filtering for point-specific updates.
     """
     response.content_type = 'text/event-stream'
     response.cache_control = 'no-cache'
     response.headers['Access-Control-Allow-Origin'] = '*'
+
+    # UUID client pour le filtrage MQTT
+    client_uuid = request.query.get("uuid")
+    new_uuid_generated = False
+    if not client_uuid:
+        client_uuid = str(uuid.uuid4())
+        new_uuid_generated = True
 
     # Queue thread-safe pour communiquer entre le callback MQTT et le flux web
     q = queue.Queue()
@@ -81,8 +90,9 @@ def chantier_sse(chantier_id):
     
     try:
         client.connect("127.0.0.1", 1883, 60)
-        # On s'abonne aux mises à jour générales
+        # On s'abonne aux mises à jour générales ET aux mises à jour spécifiques à ce client
         client.subscribe("reports/sse/updates")
+        client.subscribe(f"reports/sse/updates/{client_uuid}")
         client.loop_start()
     except Exception as e:
         return f"Erreur MQTT: {str(e)}"
@@ -91,13 +101,16 @@ def chantier_sse(chantier_id):
         # Ping initial pour confirmer la connexion au frontend
         yield "event: ping\ndata: connected\n\n"
         
+        # Si on a généré un nouvel UUID, on le transmet immédiatement au client
+        if new_uuid_generated:
+            yield f"event: uuid\ndata: {client_uuid}\n\n"
+        
         try:
             while True:
                 # Récupère le prochain message avec un timeout pour éviter un blocage total
                 # Le timeout permet de vérifier régulièrement si le client web a fermé la connexion
                 try:
                     msg = q.get(timeout=5)
-                    # Si c'est un ping d'activité API, on peut le relayer
                     # msg contient déjà le JSON prêt à l'emploi
                     yield f"data: {msg}\n\n"
                 except queue.Empty:

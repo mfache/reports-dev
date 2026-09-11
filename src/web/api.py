@@ -17,6 +17,7 @@ import json
 
 from bottle import Bottle, HTTPResponse, request, response
 import paho.mqtt.publish as mqtt_publish
+import uuid
 
 from web.responses import json_error, json_ok
 
@@ -97,6 +98,37 @@ def intercept_version_usage():
             res = HTTPResponse(status=404, body=json_error(404, "Documentation ou endpoint introuvable"))
             res.content_type = "application/json; charset=utf-8"
             raise res
+
+@api_app.post("/sse/sync")
+def sse_sync_points():
+    """
+    Synchronise les points suivis par un client SSE.
+    Le payload contient l'UUID du client et les points ajoutés/retirés.
+    """
+    data = request.json or {}
+    client_uuid = data.get("uuid")
+    added = data.get("added", [])
+    removed = data.get("removed", [])
+
+    if not client_uuid:
+        return json_error(400, "UUID manquant")
+
+    payload = {
+        "uuid": client_uuid,
+        "added": added,
+        "removed": removed
+    }
+
+    try:
+        mqtt_publish.single(
+            "reports/sse/requests",
+            json.dumps(payload),
+            hostname="127.0.0.1"
+        )
+    except Exception as e:
+        return json_error(500, f"Erreur MQTT: {str(e)}")
+
+    return json_ok({"status": "ok"})
 
 @api_app.error(404)
 def error404_api(error):

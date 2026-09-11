@@ -30,7 +30,8 @@ def test_nombre_de_routes_api_inchange(wsgi_app):
     import app as app_module
     # Garde-fou contre une perte accidentelle de route lors d'un futur
     # refactor : 16 routes au moment de l'eclatement d'api.py (10/09/2026).
-    assert len(app_module.api_app.routes) == 16
+    # Passage a 17 le 11/09/2026 suite a l'ajout de /sse/sync.
+    assert len(app_module.api_app.routes) == 17
 
 
 def test_nombre_de_routes_ui_inchange(wsgi_app):

@@ -104,86 +104,146 @@ function getTrendHtml(curr, prev) {
     }
 }
 
-let knownCounts = {};
+class SSEPointManager {
+    constructor(basePath, chantierId) {
+        this.basePath = basePath;
+        this.chantierId = chantierId;
+        this.uuid = localStorage.getItem('sse_uuid');
+        this.points = new Set();
+        this.eventSource = null;
+        this.observer = null;
+        this.pendingSync = false;
+        this.syncTimeout = null;
+    }
 
-function startRealtimeCounts(chantierId) {
-    // Initialise l'état connu à partir de l'affichage actuel (rendu par le serveur au chargement)
-    document.querySelectorAll('.trend-count-val').forEach(el => {
-        const b = el.getAttribute('data-b');
-        const p = el.getAttribute('data-p');
-        const d = el.getAttribute('data-d');
-        const o = el.getAttribute('data-o');
-        const key = `${b}|${p}|${d}|${o}`;
-        knownCounts[key] = parseInt(el.innerText) || 0;
-    });
+    start() {
+        console.log("[SSE] Démarrage du gestionnaire de points...");
+        this.connect();
+        this.setupObserver();
+        this.scanDOM(true); // Scan initial sans délai
+    }
 
-    setInterval(async () => {
+    connect() {
+        const url = `${this.basePath}/chantier/${this.chantierId}/reports_sse` + (this.uuid ? `?uuid=${this.uuid}` : '');
+        console.log(`[SSE] Connexion à ${url}`);
+        this.eventSource = new EventSource(url);
+        
+        this.eventSource.onmessage = (e) => {
+            let data = e.data;
+            try {
+                data = JSON.parse(e.data);
+            } catch (err) {
+                // Pas du JSON (ex: 'update' ou message vide)
+            }
+            this.handleUpdate(data);
+        };
+
+        this.eventSource.addEventListener('uuid', (e) => {
+             console.log(`[SSE] UUID reçu: ${e.data}`);
+             this.uuid = e.data;
+             localStorage.setItem('sse_uuid', this.uuid);
+             this.syncPoints([...this.points], []); // Premier enregistrement des points
+        });
+
+        this.eventSource.onerror = () => {
+            console.error("[SSE] Erreur de connexion, reconnexion automatique...");
+        };
+    }
+
+    setupObserver() {
+        this.observer = new MutationObserver(() => {
+            this.scheduleScan();
+        });
+        this.observer.observe(document.body, { 
+            childList: true, 
+            subtree: true 
+        });
+    }
+
+    scheduleScan() {
+        if (this.syncTimeout) clearTimeout(this.syncTimeout);
+        this.syncTimeout = setTimeout(() => this.scanDOM(), 500);
+    }
+
+    scanDOM(forceSync = false) {
+        const currentPoints = new Set();
+        document.querySelectorAll('[data-b][data-protocol][data-device][data-obj]').forEach(el => {
+            const key = `${el.dataset.b}|${el.dataset.protocol}|${el.dataset.device}|${el.dataset.obj}`;
+            currentPoints.add(key);
+        });
+
+        const added = [...currentPoints].filter(p => !this.points.has(p));
+        const removed = [...this.points].filter(p => !currentPoints.has(p));
+
+        if (added.length > 0 || removed.length > 0 || forceSync) {
+            console.log(`[SSE] DOM changé : +${added.length}, -${removed.length}`);
+            this.points = currentPoints;
+            this.syncPoints(added, removed);
+        }
+    }
+
+    async syncPoints(added = [], removed = []) {
+        if (!this.uuid) return;
         try {
-            const res = await fetch(`{{BASE_PATH}}/chantier/${chantierId}/counts`, {
+            await fetch(`${this.basePath}/api/sse/sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(knownCounts)
-            });
-            
-            if (!res.ok) return;
-            
-            // Le serveur ne renvoie *que* ce qui a changé
-            const diff = await res.json();
-            
-            // S'il n'y a aucun changement, on ne fait rien
-            if (Object.keys(diff).length === 0) return;
-            
-            // Met à jour notre état connu avec les nouvelles valeurs
-            Object.assign(knownCounts, diff);
-            
-            document.querySelectorAll('.trend-count-val').forEach(el => {
-                const b = el.getAttribute('data-b');
-                const p = el.getAttribute('data-p');
-                const d = el.getAttribute('data-d');
-                const o = el.getAttribute('data-o');
-                const key = `${b}|${p}|${d}|${o}`;
-                
-                // Si cette clé est présente dans le diff, c'est qu'elle a changé
-                if (diff[key] !== undefined) {
-                    const newVal = diff[key].c;
-                    el.innerText = newVal;
-
-                    // Restore normal styling if it was at 0
-                    if (newVal > 0 && el.style.color !== 'var(--accent-cyan)') {
-                        el.style.color = 'var(--accent-cyan)';
-                        el.style.fontWeight = 'bold';
-                        el.style.fontSize = '1em';
-                    }
-
-                    // Update corresponding value cell and trend indicator
-                    const valEl = document.querySelector(`.trend-val-val[data-b="${b}"][data-p="${p}"][data-d="${d}"][data-o="${o}"]`);
-                    const indEl = document.querySelector(`.trend-indicator[data-b="${b}"][data-p="${p}"][data-d="${d}"][data-o="${o}"]`);
-
-                    if (valEl && diff[key].v !== undefined) {
-                        const oldVal = valEl.getAttribute('data-raw-val');
-                        const newV = diff[key].v;
-
-                        if (indEl) {
-                            indEl.innerHTML = getTrendHtml(newV, oldVal);
-                        }
-
-                        valEl.innerText = newV;
-                        valEl.setAttribute('data-raw-val', newV);
-                    }
-                    
-                    // Flash the green dot
-                    const dotEl = document.querySelector(`.update-indicator[data-b="${b}"][data-p="${p}"][data-d="${d}"][data-o="${o}"]`);
-                    if (dotEl) {
-                        dotEl.style.opacity = '1';
-                        setTimeout(() => {
-                            dotEl.style.opacity = '0';
-                        }, 1500);
-                    }
-                }
+                body: JSON.stringify({
+                    uuid: this.uuid,
+                    added,
+                    removed
+                })
             });
         } catch (err) {
-            console.error("Erreur sync counts", err);
+            console.error("[SSE] Échec de synchronisation des points", err);
         }
-    }, 5000);
+    }
+
+    handleUpdate(data) {
+        // Envoi d'un événement global pour les autres scripts (ex: rafraîchissement des graphiques)
+        window.dispatchEvent(new CustomEvent('sse:message', { detail: data }));
+
+        if (data === 'update') return;
+
+        for (const [key, info] of Object.entries(data)) {
+            const parts = key.split('|');
+            if (parts.length !== 4) continue;
+            const [b, p, d, o] = parts;
+
+            const countEl = document.querySelector(`.trend-count-val[data-b="${b}"][data-p="${p}"][data-d="${d}"][data-o="${o}"]`);
+            const valEl = document.querySelector(`.trend-val-val[data-b="${b}"][data-p="${p}"][data-d="${d}"][data-o="${o}"]`);
+            const indEl = document.querySelector(`.trend-indicator[data-b="${b}"][data-p="${p}"][data-d="${d}"][data-o="${o}"]`);
+            const dotEl = document.querySelector(`.update-indicator[data-b="${b}"][data-p="${p}"][data-d="${d}"][data-o="${o}"]`);
+
+            if (countEl && info.c !== undefined) {
+                countEl.innerText = info.c;
+                countEl.style.color = 'var(--accent-cyan)';
+                countEl.style.fontWeight = 'bold';
+            }
+
+            if (valEl && info.v !== undefined) {
+                const oldVal = valEl.getAttribute('data-raw-val');
+                const newVal = info.v;
+
+                if (indEl) {
+                    indEl.innerHTML = window.getTrendHtml(newVal, oldVal);
+                }
+
+                valEl.innerText = newVal;
+                valEl.setAttribute('data-raw-val', newVal);
+
+                if (dotEl) {
+                    dotEl.style.opacity = '1';
+                    setTimeout(() => { dotEl.style.opacity = '0'; }, 1500);
+                }
+            }
+        }
+    }
+}
+
+function startRealtimeCounts(chantierId) {
+    const manager = new SSEPointManager('{{BASE_PATH}}', chantierId);
+    manager.start();
+    window.sseManager = manager; // Pour debug
 }
 </script>

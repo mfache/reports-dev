@@ -12,6 +12,12 @@
   - **Code (Backend & Frontend)** : 
     - Ajout d'une nouvelle route `GET /chantier/<id>/reports_sse` (`ui.py`) renvoyant un flux `text/event-stream`. La route boucle côté serveur et notifie le client (`yield "data: update\n\n"`) *uniquement* lorsque le `MAX(timestamp)` du chantier dans `boitier_trends` évolue.
     - Côté JS, l'interrogation par `setInterval` a été remplacée par un abonnement `EventSource` pointant vers cette nouvelle route. Les données volumineuses du graphique (`fetchChartData`) ne sont désormais téléchargées que lorsqu'un changement réel est signalé par le serveur.
+    - **Optimisation Dynamique (SSE + MQTT + MutationObserver)** :
+        - Mise en place de `SSEPointManager` dans `points_scripts.tpl` : utilise `MutationObserver` pour ne suivre que les points visibles dans le DOM.
+        - Attribution d'un **UUID unique** par client (persistant via `localStorage`) transmis au flux SSE pour un filtrage précis via MQTT.
+        - Ajout de la route `POST /api/sse/sync` pour informer le backend de l'ajout/retrait de points de données suivis par le client.
+        - Centralisation du flux SSE unique pour la page chantier, dispatchant des événements `sse:message` pour les mises à jour de valeurs (`trend-val-val`) et de graphiques.
+        - Création d'un worker asynchrone (`sse_worker.py`) utilisant `aiomqtt` pour router les valeurs vers les topics MQTT `{uuid}` correspondants.
   - **Infrastructure (Nginx & uWSGI)** : 
     - **Nginx** bloquant par défaut le flux SSE en attendant la fin de la réponse uWSGI, ajout d'un bloc `location ~ ^/reports/chantier/[0-9]+/reports_sse$` dans `docs.deltathermic.be` avec l'instruction vitale `uwsgi_buffering off;`.
     - **uWSGI** fonctionnant initialement en mode mono-thread (un flux SSE long aurait bloqué l'unique worker et gelé tout le site), ajout de `enable-threads = true` et `threads = 10` dans `reports.ini` pour assurer la gestion simultanée des clients.
