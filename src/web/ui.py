@@ -131,26 +131,24 @@ def reports_root():
             ''')
             recent_chantiers = cur.fetchall()
 
-            my_chantiers = []
-            if current_user['cas'] == 1:
-                cur.execute('''
-                    SELECT c.id, c.ref, c.adresse, 
-                       GREATEST(c.date_modification, COALESCE(MAX(b.last_sync_at), '2000-01-01')) as date_modification
-                    FROM chantiers c
-                    LEFT JOIN boitier_registre b ON b.chantier_id = c.id
-                    WHERE c.archive = 0 AND c.utilisateurs_id = %s
-                    GROUP BY c.id
-                    ORDER BY c.ref
-                ''', (current_user['id'],))
-                my_chantiers = cur.fetchall()
+            cur.execute('''
+                SELECT c.id, c.ref, c.adresse,
+                   GREATEST(c.date_modification, COALESCE(MAX(b.last_sync_at), '2000-01-01')) as date_modification
+                FROM chantiers c
+                LEFT JOIN boitier_registre b ON b.chantier_id = c.id
+                WHERE c.archive = 0 AND c.utilisateurs_id = %s
+                GROUP BY c.id
+                ORDER BY c.ref
+            ''', (current_user['id'],))
+            my_chantiers = cur.fetchall()
 
             cur.execute('''
-                SELECT c.id, c.ref, c.adresse, u.nom as charge_affaires, 
+                SELECT c.id, c.ref, c.adresse, u.nom as charge_affaires,
                        GREATEST(c.date_modification, COALESCE(MAX(b.last_sync_at), '2000-01-01')) as date_modification
                 FROM chantiers c
                 LEFT JOIN utilisateurs u ON c.utilisateurs_id = u.id
                 LEFT JOIN boitier_registre b ON b.chantier_id = c.id
-                WHERE c.archive = 0 AND c.utilisateurs_id != %s
+                WHERE c.archive = 0 AND (c.utilisateurs_id IS NULL OR c.utilisateurs_id != %s)
                 GROUP BY c.id
                 ORDER BY c.ref
             ''', (current_user['id'],))

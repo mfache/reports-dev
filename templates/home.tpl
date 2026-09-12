@@ -6,8 +6,25 @@
     </div>
 </div>
 
+    <h2 style="margin-top: 20px;">📂 Mes Chantiers</h2>
+    <div class="grid">
+        % if my_chantiers:
+            % for c in my_chantiers:
+            <a href="{{BASE_PATH}}/chantier/{{c['id']}}" class="card">
+                <h3><span class="text-primary">{{c['ref']}}</span></h3>
+                <p><span class="material-symbols-outlined icon-inline">location_on</span> {{c['adresse'] or 'Adresse non renseignée'}}</p>
+                <div class="meta">
+                    <span>Dernière synchro : {{c['date_modification'].strftime('%d/%m/%Y')}}</span>
+                </div>
+            </a>
+            % end
+        % else:
+            <p class="hint">Aucun chantier ne vous est assigné.</p>
+        % end
+    </div>
+
 % if recent_chantiers:
-    <div class="nav-label" style="padding-left: 0; margin-bottom: 12px;">
+    <div class="nav-label" style="padding-left: 0; margin-bottom: 12px; margin-top: 40px;">
         <span class="material-symbols-outlined icon-label">history</span> Activité Récente
     </div>
     <div class="grid">
@@ -31,26 +48,7 @@
     </div>
 % end
 
-% if current_user['cas'] == 1:
-    <h2 style="margin-top: 40px;">📂 Mes Chantiers</h2>
-    <div class="grid">
-        % if my_chantiers:
-            % for c in my_chantiers:
-            <a href="{{BASE_PATH}}/chantier/{{c['id']}}" class="card">
-                <h3><span class="text-primary">{{c['ref']}}</span></h3>
-                <p><span class="material-symbols-outlined icon-inline">location_on</span> {{c['adresse'] or 'Adresse non renseignée'}}</p>
-                <div class="meta">
-                    <span>Dernière synchro : {{c['date_modification'].strftime('%d/%m/%Y')}}</span>
-                </div>
-            </a>
-            % end
-        % else:
-            <p class="hint">Aucun chantier ne vous est assigné.</p>
-        % end
-    </div>
-% end
-
-<h2 style="margin-top: 40px;">🏢 {{"Autres Chantiers" if current_user['cas'] == 1 else "Tous les chantiers"}}</h2>
+<h2 style="margin-top: 40px;">🏢 Autres Chantiers</h2>
 <div class="grid">
     % if other_chantiers:
         % for c in other_chantiers:
