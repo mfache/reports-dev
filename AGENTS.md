@@ -7,8 +7,11 @@ Vous êtes dans le bac à sable de développement de l'application `reports`. Le
 - Les modifications de base de données doivent se faire de préférence sur la base `dt_dev`, pas sur la base de production `dt`.
 
 ## Modèle de données & Fonctionnalités (Recherches consignées)
-- **Affectation des Chantiers aux Utilisateurs** : L'attribution ne se fait pas via une table de jointure classique, mais via la table `filtres` (`utilisateurs_id`, `chantiers_id`, `ref` (nom du filtre), `tri`, `description`). Un utilisateur a accès à un chantier si un filtre lui est associé pour ce chantier.
+- **Affectation des Chantiers aux Utilisateurs (chargé d'affaires)** : se fait directement via la colonne `chantiers.utilisateurs_id` (relation 1-vers-1 : un chantier a un seul chargé d'affaires). Utilisé notamment dans `src/web/ui.py` (alias `charge_affaires`). ⚠️ Ne pas confondre avec la table `filtres`.
+- **Table `filtres`** : n'a rien à voir avec l'attribution des chantiers. Elle sert à définir des catégories de remarques personnelles à un utilisateur pour un chantier donné (`utilisateurs_id`, `chantiers_id`, `ref` limité à 10 caractères, `tri`, `description`). Chaque `remarques.filtres_id` référence une de ces catégories.
+- **Table `remarques`** : les remarques/défauts eux-mêmes, positionnés sur un point (`cibles_id`, coordonnées sur un `plans`) et catégorisés via `filtres_id`.
 - Les interfaces d'administration sont gérées dans `src/web/admin_users.py` et les templates associés (`admin_users.tpl`, `admin_chantiers_users.tpl`).
+- Schémas SQL de `dt` (prod) et `dt_dev` (dev) vérifiés identiques le 12/09/2026 (tables, colonnes, contraintes, vues).
 
 ## Rechargement de l'application
 Après toute modification du code Python, l'application uWSGI doit être rechargée pour que les changements soient visibles.

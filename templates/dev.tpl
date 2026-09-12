@@ -65,6 +65,7 @@
     <a href="?tab=sql" class="{{'tab-active' if tab == 'sql' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">SQL & DB</a>
     <a href="?tab=api" class="{{'tab-active' if tab == 'api' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">Doc API</a>
     <a href="?tab=env" class="{{'tab-active' if tab == 'env' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">Système</a>
+    <a href="?tab=deploy" class="{{'tab-active' if tab == 'deploy' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">Déploiement</a>
 </div>
 
 % if tab == 'sql':
@@ -262,4 +263,149 @@
             </tbody>
         </table>
     </div>
+
+% elif tab == 'deploy':
+    <div class="card luminescent-border" style="border-left: 4px solid var(--tertiary);">
+        <h3 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+            <span class="material-symbols-outlined text-tertiary">rocket_launch</span>
+            Déployer vers la production
+        </h3>
+        <p class="hint">
+            Exécute le vrai flux de déploiement décrit dans <code>OPERATIONS.md</code> :
+            commit local (<code>/opt/reports-dev</code>) &rarr;
+            <strong>copie vers <code>/var/www/reports</code> (la production)</strong> &rarr;
+            rechargement du worker uwsgi de prod &rarr;
+            archivage de l'état réel vers <code>/opt/docs-infra</code> &rarr;
+            commit + <code>git push</code> vers GitHub.
+        </p>
+        <p class="hint" style="color: var(--error); font-weight: 600;">
+            ⚠️ Cette action écrit directement dans <code>/var/www/reports</code>, la vraie production utilisée par les utilisateurs, et recharge son worker uwsgi. Vérifiez l'aperçu ci-dessous avant de continuer.
+        </p>
+
+        <div class="nav-label" style="padding-left: 0; margin-top: 24px;">Modifications en attente dans le bac à sable (historique local)</div>
+        % if git_status_error:
+        <div class="card" style="border-color: var(--error); color: var(--error);">{{git_status_error}}</div>
+        % elif git_status_lignes:
+        <pre style="background: var(--surface-lowest); padding: 16px; border-radius: var(--radius); border: 1px solid var(--outline-variant); font-size: 0.85rem; overflow-x: auto;">
+% for ligne in git_status_lignes:
+{{ligne}}
+% end
+</pre>
+        % else:
+        <p class="text-muted">Aucune modification en attente : le bac à sable est identique au dernier commit local.</p>
+        % end
+
+        <div class="nav-label" style="padding-left: 0; margin-top: 24px;">Aperçu de ce qui sera écrit dans /var/www/reports (production)</div>
+        % if prod_diff_error:
+        <div class="card" style="border-color: var(--error); color: var(--error);">{{prod_diff_error}}</div>
+        % elif prod_diff_lignes:
+        <pre style="background: var(--surface-lowest); padding: 16px; border-radius: var(--radius); border: 1px solid var(--outline-variant); font-size: 0.85rem; overflow-x: auto;">
+% for ligne in prod_diff_lignes:
+{{ligne}}
+% end
+</pre>
+        % else:
+        <p class="text-muted">Aucune différence : la production est déjà identique au bac à sable.</p>
+        % end
+
+        <div class="nav-label" style="padding-left: 0; margin-top: 24px;">Config uWSGI (reports.ini vs reports-dev.ini)</div>
+        <p class="hint" style="font-size: 0.85rem; margin-bottom: 10px;">Le déploiement ne modifie jamais <code>/etc/uwsgi/apps-enabled/reports.ini</code>. Cette vérification existe suite à l'incident du 12/09/2026 (pythonpath <code>src/</code> manquant en prod &rarr; 500 en boucle).</p>
+        % if uwsgi_cfg.get('erreur'):
+        <div class="card" style="border-color: var(--error); color: var(--error);">{{uwsgi_cfg['erreur']}}</div>
+        % elif uwsgi_cfg.get('manquant_en_prod') or uwsgi_cfg.get('en_trop_en_prod'):
+        <div class="card" style="border-color: #d9a441; background: rgba(217, 164, 65, 0.1); color: #d9a441;">
+            <span class="material-symbols-outlined icon-inline">warning</span>
+            La config diverge au-delà des différences de chemins attendues.
+            % if uwsgi_cfg.get('manquant_en_prod'):
+            <div style="margin-top: 10px;"><strong>Présent en dev, absent en prod :</strong>
+            <pre style="background: var(--surface-lowest); padding: 12px; border-radius: var(--radius); font-size: 0.8rem; overflow-x: auto; color: var(--on-surface);">
+% for ligne in uwsgi_cfg['manquant_en_prod']:
+{{ligne}}
+% end
+</pre></div>
+            % end
+            % if uwsgi_cfg.get('en_trop_en_prod'):
+            <div style="margin-top: 10px;"><strong>Présent en prod, absent en dev :</strong>
+            <pre style="background: var(--surface-lowest); padding: 12px; border-radius: var(--radius); font-size: 0.8rem; overflow-x: auto; color: var(--on-surface);">
+% for ligne in uwsgi_cfg['en_trop_en_prod']:
+{{ligne}}
+% end
+</pre></div>
+            % end
+        </div>
+        % else:
+        <p class="text-muted">Configurations cohérentes (aucune différence structurelle au-delà des chemins/socket attendus).</p>
+        % end
+
+        % if BASE_PATH != '/reports':
+        <div class="form-group" style="margin-top: 24px;">
+            <label>Message de commit</label>
+            <input type="text" id="deploy-message" class="input-dark" placeholder="Ex: Correction de l'attribution des chantiers aux utilisateurs">
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px;">
+            <button onclick="lancerDeploiement()" class="btn-primary" style="background: var(--error); border-color: var(--error);">
+                <span class="material-symbols-outlined icon-sm">rocket_launch</span> Déployer vers la production
+            </button>
+        </div>
+
+        <div id="deploy-result" style="margin-top: 24px;"></div>
+        % end
+    </div>
+
+    <script>
+    async function lancerDeploiement() {
+        const messageInput = document.getElementById('deploy-message');
+        const message = messageInput.value.trim();
+        const resultDiv = document.getElementById('deploy-result');
+
+        if (!message) {
+            alert("Merci de saisir un message de commit.");
+            return;
+        }
+
+        const confirmation = prompt("Cette action va ECRIRE DIRECTEMENT dans /var/www/reports (la vraie production), recharger son worker uwsgi, puis archiver et pousser vers GitHub.\n\nTapez DEPLOYER pour confirmer :");
+        if (confirmation !== "DEPLOYER") {
+            return;
+        }
+
+        resultDiv.innerHTML = '<div class="hint">Déploiement en cours...</div>';
+
+        try {
+            const res = await fetch('{{BASE_PATH}}/dev/deploy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+            const data = await res.json();
+
+            let html = '';
+            if (data.steps) {
+                html += '<div class="table-scroll"><table class="data-table"><thead><tr><th>Étape</th><th>Statut</th><th>Détail</th></tr></thead><tbody>';
+                data.steps.forEach(step => {
+                    const color = step.ok ? 'var(--secondary)' : 'var(--error)';
+                    const icon = step.ok ? 'check_circle' : 'error';
+                    html += `<tr><td>${step.label}</td><td style="color: ${color};"><span class="material-symbols-outlined icon-sm">${icon}</span></td><td><pre style="white-space: pre-wrap; font-size: 0.8rem; margin: 0;">${step.output || ''}</pre></td></tr>`;
+                });
+                html += '</tbody></table></div>';
+            }
+
+            if (data.warnings && data.warnings.length > 0) {
+                data.warnings.forEach(w => {
+                    html += `<div class="card" style="border-color: #d9a441; background: rgba(217, 164, 65, 0.1); color: #d9a441; margin-top: 16px;"><span class="material-symbols-outlined icon-inline">warning</span> ${w}</div>`;
+                });
+            }
+
+            if (data.error) {
+                html += `<div class="card" style="border-color: var(--error); background: rgba(147, 0, 10, 0.1); color: var(--error); margin-top: 16px;"><span class="material-symbols-outlined icon-inline">error</span> ${data.error}</div>`;
+            } else if (data.status === 'ok') {
+                html += `<div class="card" style="border-color: var(--secondary); background: rgba(74, 225, 118, 0.1); color: var(--secondary); margin-top: 16px;"><span class="material-symbols-outlined icon-inline">check_circle</span> ${data.message}</div>`;
+            }
+
+            resultDiv.innerHTML = html;
+        } catch (e) {
+            resultDiv.innerHTML = `<div class="card" style="border-color: var(--error); color: var(--error);">Erreur réseau : ${e.message}</div>`;
+        }
+    }
+    </script>
 % end

@@ -2,7 +2,7 @@
 <div class="header-with-actions">
     <div>
         <h2>📋 Affectation des Chantiers</h2>
-        <p class="hint">Attribution des chantiers aux utilisateurs (gestion des filtres).</p>
+        <p class="hint">Attribution du chargé d'affaires (chantiers.utilisateurs_id) pour chaque chantier.</p>
     </div>
 </div>
 
@@ -32,34 +32,39 @@
         </div>
     </div>
 
-    <!-- Détail des filtres pour l'utilisateur sélectionné -->
+    <!-- Détail des chantiers pour l'utilisateur sélectionné -->
     <div style="flex: 2;">
         % if selected_uid:
         <div class="card" style="margin-bottom: 20px;">
-            <h3>Filtres / Chantiers attribués</h3>
-            % if filtres:
+            <h3>Chantiers dont il/elle est chargé(e) d'affaires</h3>
+            % if chantiers_utilisateur:
             <div class="table-scroll">
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Chantier</th>
-                            <th>Filtre (Réf)</th>
-                            <th>Description</th>
-                            <th>Ordre</th>
+                            <th>Adresse</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        % for f in filtres:
+                        % for c in chantiers_utilisateur:
                         <tr>
-                            <td>{{f['chantier_ref']}}</td>
-                            <td>{{f['filtre_ref']}}</td>
-                            <td>{{f['description'] or '—'}}</td>
-                            <td>{{f['tri']}}</td>
+                            <td>{{c['ref']}}</td>
+                            <td>{{c['adresse'] or '—'}}</td>
                             <td>
-                                <form action="{{BASE_PATH}}/admin/chantiers-users/delete/{{f['id']}}" method="POST" style="display:inline;" hx-boost="false">
+                                <form action="{{BASE_PATH}}/admin/chantiers-users/assign" method="POST" style="display:inline;" hx-boost="false">
                                     <input type="hidden" name="uid" value="{{selected_uid}}">
-                                    <button type="submit" class="btn-secondary btn-sm" style="color: var(--error); border-color: var(--error);">Supprimer</button>
+                                    <input type="hidden" name="chantier_id" value="{{c['id']}}">
+                                    <select name="new_uid" class="input-dark" style="padding: 2px 5px; font-size: 0.9em; max-width: 150px;" required>
+                                        <option value="">-- Réattribuer à --</option>
+                                        % for u in users:
+                                            % if str(u['id']) != str(selected_uid):
+                                            <option value="{{u['id']}}">{{u['nom'] or u['ref']}}</option>
+                                            % end
+                                        % end
+                                    </select>
+                                    <button type="submit" class="btn-secondary btn-sm">Réattribuer</button>
                                 </form>
                             </td>
                         </tr>
@@ -68,43 +73,31 @@
                 </table>
             </div>
             % else:
-            <p class="text-muted">Aucun filtre attribué à cet utilisateur.</p>
+            <p class="text-muted">Aucun chantier attribué à cet utilisateur.</p>
             % end
         </div>
 
         <div class="card">
-            <h3>Ajouter un filtre (Chantier)</h3>
-            <form action="{{BASE_PATH}}/admin/chantiers-users/add" method="POST" hx-boost="false" style="display: grid; gap: 15px;">
+            <h3>Attribuer un chantier existant à cet utilisateur</h3>
+            <p class="hint" style="margin-bottom: 10px;">Un chantier ne peut avoir qu'un seul chargé d'affaires : le sélectionner ici le retire automatiquement de son propriétaire actuel.</p>
+            <form action="{{BASE_PATH}}/admin/chantiers-users/assign" method="POST" hx-boost="false" style="display: grid; gap: 15px;">
                 <input type="hidden" name="uid" value="{{selected_uid}}">
+                <input type="hidden" name="new_uid" value="{{selected_uid}}">
                 
                 <div class="form-group">
                     <label>Chantier</label>
                     <select name="chantier_id" class="input-dark" required>
                         <option value="">-- Choisir un chantier --</option>
                         % for c in chantiers:
-                        <option value="{{c['id']}}">{{c['ref']}} - {{c['adresse'] or ''}}</option>
+                            % if str(c['utilisateurs_id']) != str(selected_uid):
+                            <option value="{{c['id']}}">{{c['ref']}} - {{c['adresse'] or ''}} (actuellement : {{c['charge_affaires'] or '—'}})</option>
+                            % end
                         % end
                     </select>
                 </div>
 
-                <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label>Référence du Filtre</label>
-                        <input type="text" name="filtre_ref" class="input-dark" required placeholder="Ex: Notes, Accès...">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label>Ordre (Tri)</label>
-                        <input type="number" name="tri" class="input-dark" value="0">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Description</label>
-                    <input type="text" name="description" class="input-dark" placeholder="Description courte (optionnel)">
-                </div>
-
                 <div style="text-align: right;">
-                    <button type="submit" class="btn-primary">Ajouter</button>
+                    <button type="submit" class="btn-primary">Attribuer</button>
                 </div>
             </form>
         </div>
