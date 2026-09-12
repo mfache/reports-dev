@@ -1,5 +1,6 @@
 from bottle import request, redirect, HTTPError
 from web.ui import ui_app, BASE_PATH, view
+from web.templating import get_current_user
 from core.database import get_db
 
 def is_admin(user):
@@ -7,7 +8,7 @@ def is_admin(user):
 
 @ui_app.get("/admin/utilisateurs")
 def admin_users_list():
-    current_user = request.environ.get('reports.user', {})
+    current_user = get_current_user()
     if not is_admin(current_user):
         raise HTTPError(403, "Accès refusé.")
     
@@ -30,7 +31,7 @@ def admin_users_list():
 
 @ui_app.post("/admin/utilisateurs")
 def admin_users_create():
-    current_user = request.environ.get('reports.user', {})
+    current_user = get_current_user()
     if not is_admin(current_user):
         raise HTTPError(403, "Accès refusé.")
     
@@ -65,7 +66,7 @@ def admin_users_create():
 
 @ui_app.post("/admin/utilisateurs/<user_id:int>/update")
 def admin_users_update(user_id):
-    current_user = request.environ.get('reports.user', {})
+    current_user = get_current_user()
     if not is_admin(current_user):
         raise HTTPError(403, "Accès refusé.")
         
@@ -101,7 +102,7 @@ def admin_users_update(user_id):
 
 @ui_app.post("/admin/utilisateurs/<user_id:int>/delete")
 def admin_users_delete(user_id):
-    current_user = request.environ.get('reports.user', {})
+    current_user = get_current_user()
     if not is_admin(current_user):
         raise HTTPError(403, "Accès refusé.")
         
@@ -118,7 +119,7 @@ def admin_users_delete(user_id):
 
 @ui_app.get("/admin/chantiers-users")
 def admin_chantiers_users():
-    current_user = request.environ.get('reports.user', {})
+    current_user = get_current_user()
     if not is_admin(current_user):
         raise HTTPError(403, "Accès refusé.")
         
