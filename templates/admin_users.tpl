@@ -1,15 +1,15 @@
-
 <div class="header-with-actions">
     <div>
         <h2>👥 Gestion des Utilisateurs</h2>
-        <p class="hint">Ajouter, modifier ou supprimer des utilisateurs et leurs adresses e-mail.</p>
+        <p class="hint">Ajouter, modifier ou archiver des utilisateurs et leurs adresses e-mail.</p>
     </div>
     <button class="btn-primary" onclick="openModal('modal-add-user')">
         <span class="material-symbols-outlined icon-sm">add</span> Ajouter un utilisateur
     </button>
 </div>
 
-<div class="card">
+<div class="card" style="margin-bottom: 30px;">
+    <h3>Utilisateurs Actifs</h3>
     <div class="table-scroll">
         <table class="data-table">
             <thead>
@@ -51,8 +51,40 @@
                     </td>
                     <td>
                         <button class="btn-secondary" onclick="editUser({{user['id']}}, '{{user['ref']}}', '{{user['nom'] or ''}}', '{{user['emails'] or ''}}', {{user['cas']}}, {{user['adm']}}, {{user['wrk']}}, {{user['rot']}})">Modifier</button>
-                        <form action="{{BASE_PATH}}/admin/utilisateurs/{{user['id']}}/delete" method="POST" style="display:inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?');">
-                            <button type="submit" class="btn-secondary" style="border-color: var(--error); color: var(--error);">Supprimer</button>
+                        <a href="{{BASE_PATH}}/admin/chantiers-users?uid={{user['id']}}" class="btn-secondary" style="margin-left:5px;">Chantiers</a>
+                    </td>
+                </tr>
+                % end
+                % if not users:
+                <tr><td colspan="5" class="text-muted" style="text-align:center;">Aucun utilisateur actif.</td></tr>
+                % end
+            </tbody>
+        </table>
+    </div>
+</div>
+
+% if archived_users:
+<div class="card" style="opacity: 0.85;">
+    <h3>Utilisateurs Archivés</h3>
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Réf.</th>
+                    <th>Nom</th>
+                    <th>E-mails</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                % for user in archived_users:
+                <tr>
+                    <td class="font-mono text-muted">{{user['ref']}}</td>
+                    <td class="text-muted">{{user['nom'] or '—'}}</td>
+                    <td><span class="text-muted">{{user['emails'] or '—'}}</span></td>
+                    <td>
+                        <form action="{{BASE_PATH}}/admin/utilisateurs/{{user['id']}}/unarchive" method="POST" style="display:inline;" hx-boost="false">
+                            <button type="submit" class="btn-secondary">Restaurer</button>
                         </form>
                     </td>
                 </tr>
@@ -61,6 +93,7 @@
         </table>
     </div>
 </div>
+% end
 
 <!-- Modal Ajouter -->
 <div id="modal-add-user" class="modal">
@@ -116,11 +149,15 @@
                 <label><input type="checkbox" id="edit-wrk" name="wrk"> Worker</label>
                 <label><input type="checkbox" id="edit-rot" name="rot"> Root</label>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-                <button type="button" class="btn-secondary" onclick="closeModal('modal-edit-user')">Annuler</button>
-                <button type="submit" class="btn-primary">Enregistrer</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                <button type="button" class="btn-secondary" style="border-color: var(--error); color: var(--error);" onclick="document.getElementById('form-archive-user').submit();">Archiver</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('modal-edit-user')">Annuler</button>
+                    <button type="submit" class="btn-primary">Enregistrer</button>
+                </div>
             </div>
         </form>
+        <form id="form-archive-user" method="POST" style="display:none;" hx-boost="false"></form>
     </div>
 </div>
 
@@ -134,6 +171,7 @@ function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function editUser(id, ref, nom, emails, cas, adm, wrk, rot) {
     document.getElementById('form-edit-user').action = '{{BASE_PATH}}/admin/utilisateurs/' + id + '/update';
+    document.getElementById('form-archive-user').action = '{{BASE_PATH}}/admin/utilisateurs/' + id + '/archive';
     document.getElementById('edit-ref').value = ref;
     document.getElementById('edit-nom').value = nom;
     document.getElementById('edit-emails').value = emails;

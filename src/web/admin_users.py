@@ -17,7 +17,7 @@ def admin_users_list():
     try:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT u.*, GROUP_CONCAT(e.email SEPARATOR ', ') as emails
+                SELECT u.*, GROUP_CONCAT(e.email SEPARATOR ', ') as emails, u.archive
                 FROM utilisateurs u
                 LEFT JOIN utilisateurs_emails e ON e.utilisateur_id = u.id
                 GROUP BY u.id
@@ -27,7 +27,11 @@ def admin_users_list():
     finally:
         db.close()
         
-    return view('admin_users', title="Gestion Utilisateurs", users=users)
+    
+    active_users = [u for u in users if not u.get('archive')]
+    archived_users = [u for u in users if u.get('archive')]
+    return view('admin_users', title="Gestion Utilisateurs", users=active_users, archived_users=archived_users)
+
 
 @ui_app.post("/admin/utilisateurs")
 def admin_users_create():
@@ -100,8 +104,8 @@ def admin_users_update(user_id):
         
     redirect(f"{BASE_PATH}/admin/utilisateurs")
 
-@ui_app.post("/admin/utilisateurs/<user_id:int>/delete")
-def admin_users_delete(user_id):
+@ui_app.post("/admin/utilisateurs/<user_id:int>/archive")
+def admin_users_archive(user_id):
     current_user = get_current_user()
     if not is_admin(current_user):
         raise HTTPError(403, "Accès refusé.")
@@ -109,8 +113,23 @@ def admin_users_delete(user_id):
     db = get_db()
     try:
         with db.cursor() as cur:
-            cur.execute("DELETE FROM utilisateurs_emails WHERE utilisateur_id=%s", (user_id,))
-            cur.execute("DELETE FROM utilisateurs WHERE id=%s", (user_id,))
+            cur.execute("UPDATE utilisateurs SET archive = 1 WHERE id = %s", (user_id,))
+        db.commit()
+    finally:
+        db.close()
+        
+    redirect(f"{BASE_PATH}/admin/utilisateurs")
+
+@ui_app.post("/admin/utilisateurs/<user_id:int>/unarchive")
+def admin_users_unarchive(user_id):
+    current_user = get_current_user()
+    if not is_admin(current_user):
+        raise HTTPError(403, "Accès refusé.")
+        
+    db = get_db()
+    try:
+        with db.cursor() as cur:
+            cur.execute("UPDATE utilisateurs SET archive = 0 WHERE id = %s", (user_id,))
         db.commit()
     finally:
         db.close()
