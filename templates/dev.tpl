@@ -3,13 +3,13 @@
     <div>
         <h2>🛠️ Espace Développeur</h2>
         <p class="hint">Outils de diagnostic, introspection de la base de données et documentation API.</p>
-    
+
     <div style="display: flex; align-items: center; gap: 15px;">
         <div id="sim-status" style="font-family: var(--font-mono); font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.1); color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
             <span class="material-symbols-outlined icon-sm">sync</span> Chargement...
         </div>
         <button id="sim-btn" onclick="toggleSimulator()" class="btn-primary" style="background: var(--surface-low); border: 1px solid var(--outline); color: var(--text); padding: 8px 16px;">
-            <span class="material-symbols-outlined icon-sm">sensors</span> 
+            <span class="material-symbols-outlined icon-sm">sensors</span>
             <span id="sim-btn-text">Démarrer Simulateur</span>
         </button>
     </div>
@@ -28,7 +28,7 @@
     function updateSimUI(status) {
         const statusEl = document.getElementById('sim-status');
         const btnText = document.getElementById('sim-btn-text');
-        
+
         if (status === 'started') {
             statusEl.innerHTML = '<span class="material-symbols-outlined icon-sm" style="color: var(--secondary);">graphic_eq</span> Simulateur Actif';
             statusEl.style.background = 'rgba(74, 225, 118, 0.1)';
@@ -65,7 +65,9 @@
     <a href="?tab=sql" class="{{'tab-active' if tab == 'sql' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">SQL & DB</a>
     <a href="?tab=api" class="{{'tab-active' if tab == 'api' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">Doc API</a>
     <a href="?tab=env" class="{{'tab-active' if tab == 'env' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">Système</a>
+    % if BASE_PATH != "/reports":
     <a href="?tab=deploy" class="{{'tab-active' if tab == 'deploy' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">Déploiement</a>
+    % end
 </div>
 
 % if tab == 'sql':
@@ -75,7 +77,7 @@
             Console SQL Interactive
         </h3>
         <p class="hint">Exécutez des requêtes MariaDB directement sur la base <code>{{'dt_dev' if BASE_PATH != '/reports' else 'dt'}}</code>.</p>
-        
+
         <div class="form-group" style="margin-top: 20px;">
             <textarea id="sql-query" placeholder="SELECT * FROM chantiers LIMIT 5;" class="input-dark" style="height: 120px; font-size: 1rem;"></textarea>
         </div>
@@ -182,7 +184,7 @@
             <div class="stat-val font-mono" style="font-size: 1.1rem; color: var(--primary);">{{BASE_PATH}}/api</div>
         </div>
     </div>
-    
+
     % for doc in api_docs:
         % color = "var(--secondary)" if doc["method"] == "GET" else "var(--tertiary)"
         <div class="card luminescent-border" style="border-left: 4px solid {{color}};">
