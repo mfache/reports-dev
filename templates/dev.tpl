@@ -65,7 +65,6 @@
     <a href="?tab=sql" class="{{'tab-active' if tab == 'sql' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">SQL & DB</a>
     <a href="?tab=api" class="{{'tab-active' if tab == 'api' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">Doc API</a>
     <a href="?tab=env" class="{{'tab-active' if tab == 'env' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">Système</a>
-    <a href="?tab=drawdb" class="{{'tab-active' if tab == 'drawdb' else 'tab-inactive'}}" style="border-bottom: none; border-radius: var(--radius-md); padding: 8px 20px;">DrawDB</a>
 </div>
 
 % if tab == 'sql':
@@ -262,10 +261,5 @@
                 % end
             </tbody>
         </table>
-    </div>
-
-% elif tab == 'drawdb':
-    <div class="card luminescent-border" style="padding: 0; overflow: hidden; height: 80vh; border-radius: var(--radius-lg);">
-        <iframe src="https://www.drawdb.app/editor" style="width: 100%; height: 100%; border: none;"></iframe>
     </div>
 % end
