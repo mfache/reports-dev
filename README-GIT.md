@@ -18,21 +18,29 @@ Puisque nous développons dans `/opt/reports-dev`, il faut synchroniser notre tr
 
 Voici la procédure exacte (commandes à copier-coller) :
 
-### 1. Synchroniser le bac à sable vers le dépôt Git
+### 1. Commiter localement dans le bac à sable (Optionnel mais recommandé)
+Même si ce dossier n'est pas relié à GitHub, il possède son propre dépôt Git local pour tracer votre historique de travail.
+
+```bash
+git add .
+git commit -m "Description de la mise à jour locale..."
+```
+
+### 2. Synchroniser le bac à sable vers le dépôt Git
 On utilise `rsync` pour copier nos modifications en excluant les dossiers inutiles (`.git`, `__pycache__`) :
 
 ```bash
 rsync -av --delete --exclude='.git' --exclude='__pycache__' /opt/reports-dev/ /opt/docs-infra/var/www/reports/
 ```
 
-### 2. Voir le statut des modifications
-On se déplace virtuellement dans le dépôt Git pour voir ce qui a changé :
+### 3. Voir le statut des modifications (côté docs-infra)
+On se déplace virtuellement dans le dépôt Git global pour voir ce qui a changé :
 
 ```bash
 git -C /opt/docs-infra status
 ```
 
-### 3. Ajouter, Commiter et Pusher
+### 4. Ajouter, Commiter et Pusher (côté docs-infra)
 On ajoute les fichiers du sous-dossier `reports`, on valide et on envoie sur GitHub :
 
 ```bash
