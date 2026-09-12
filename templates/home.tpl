@@ -15,7 +15,9 @@
         <a href="{{BASE_PATH}}/chantier/{{c['id']}}" class="card card-recent luminescent-border" style="border-left: 4px solid var(--tertiary);">
             <h3>
                 <span class="text-tertiary">{{c['ref']}}</span>
+                % if c.get('active_boitiers', 0) > 0:
                 <span class="badge-recent" style="background: rgba(255, 184, 115, 0.1); color: var(--tertiary); border-color: rgba(255, 184, 115, 0.3);">ACTIF</span>
+                % end
             </h3>
             <p><span class="material-symbols-outlined icon-inline">location_on</span> {{c['adresse'] or 'Adresse non renseignée'}}</p>
             <p><span class="material-symbols-outlined icon-inline">person</span> {{c['charge_affaires'] or 'Non assigné'}}</p>

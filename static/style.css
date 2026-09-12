@@ -752,7 +752,7 @@ select option {
     background: var(--outline-variant);
 }
 
-.widgets-container, .devices-grid, .grid-2col {
+.widgets-container, .devices-grid, .grid-2col, .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
@@ -761,7 +761,7 @@ select option {
 /* ---------------------------------------------------------------------------
    Status Badges & Pills
 --------------------------------------------------------------------------- */
-.status-pill, .badge {
+.status-pill, .badge, .badge-recent {
     font-size: 0.7rem;
     font-weight: 700;
     padding: 3px 10px;

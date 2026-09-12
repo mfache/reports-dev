@@ -118,8 +118,9 @@ def reports_root():
     try:
         with db.cursor() as cur:
             cur.execute('''
-                SELECT c.id, c.ref, c.adresse, u.nom as charge_affaires, 
-                       GREATEST(c.date_modification, COALESCE(MAX(b.last_sync_at), '2000-01-01')) as date_modification
+                SELECT c.id, c.ref, c.adresse, u.nom as charge_affaires,
+                       GREATEST(c.date_modification, COALESCE(MAX(b.last_sync_at), '2000-01-01')) as date_modification,
+                       SUM(CASE WHEN b.last_sync_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) THEN 1 ELSE 0 END) as active_boitiers
                 FROM chantiers c
                 LEFT JOIN utilisateurs u ON c.utilisateurs_id = u.id
                 LEFT JOIN boitier_registre b ON b.chantier_id = c.id
