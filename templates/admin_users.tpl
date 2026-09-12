@@ -66,7 +66,7 @@
 <div id="modal-add-user" class="modal">
     <div class="modal-content" style="max-width: 500px;">
         <h3>Ajouter un utilisateur</h3>
-        <form action="{{BASE_PATH}}/admin/utilisateurs" method="POST">
+        <form action="{{BASE_PATH}}/admin/utilisateurs" method="POST" hx-boost="false">
             <div class="form-group">
                 <label>Référence (ex: usr_xxx)</label>
                 <input type="text" name="ref" class="input-dark" required>
@@ -97,7 +97,7 @@
 <div id="modal-edit-user" class="modal">
     <div class="modal-content" style="max-width: 500px;">
         <h3>Modifier l'utilisateur</h3>
-        <form id="form-edit-user" method="POST">
+        <form id="form-edit-user" method="POST" hx-boost="false">
             <div class="form-group">
                 <label>Référence</label>
                 <input type="text" id="edit-ref" name="ref" class="input-dark" required>
