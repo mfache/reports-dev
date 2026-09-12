@@ -17,6 +17,8 @@
                 <span class="text-tertiary">{{c['ref']}}</span>
                 % if c.get('active_boitiers', 0) > 0:
                 <span class="badge-recent" style="background: rgba(255, 184, 115, 0.1); color: var(--tertiary); border-color: rgba(255, 184, 115, 0.3);">ACTIF</span>
+                % else:
+                <span class="badge-recent" style="background: rgba(147, 0, 10, 0.18); color: var(--error); border-color: rgba(255, 180, 171, 0.3);">INACTIF &gt; 15"</span>
                 % end
             </h3>
             <p><span class="material-symbols-outlined icon-inline">location_on</span> {{c['adresse'] or 'Adresse non renseignée'}}</p>
