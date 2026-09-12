@@ -1,6 +1,6 @@
 from bottle import request, redirect, HTTPError
 from web.ui import ui_app, BASE_PATH, view
-from web.templating import get_current_user
+from web.templating import get_current_user, get_real_user
 from core.database import get_db
 
 def is_admin(user):
@@ -8,8 +8,8 @@ def is_admin(user):
 
 @ui_app.get("/admin/utilisateurs")
 def admin_users_list():
-    current_user = get_current_user()
-    if not is_admin(current_user):
+    real_user = get_real_user()
+    if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
     
     db = get_db()
@@ -33,10 +33,10 @@ def admin_users_list():
     return view('admin_users', title="Gestion Utilisateurs", users=active_users, archived_users=archived_users)
 
 
-@ui_app.post("/admin/utilisateurs")
-def admin_users_create():
-    current_user = get_current_user()
-    if not is_admin(current_user):
+@ui_app.post("/admin/utilisateurs/edit")
+def admin_users_edit():
+    real_user = get_real_user()
+    if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
     
     data = request.forms
@@ -70,8 +70,8 @@ def admin_users_create():
 
 @ui_app.post("/admin/utilisateurs/<user_id:int>/update")
 def admin_users_update(user_id):
-    current_user = get_current_user()
-    if not is_admin(current_user):
+    real_user = get_real_user()
+    if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
         
     data = request.forms
@@ -106,8 +106,8 @@ def admin_users_update(user_id):
 
 @ui_app.post("/admin/utilisateurs/<user_id:int>/archive")
 def admin_users_archive(user_id):
-    current_user = get_current_user()
-    if not is_admin(current_user):
+    real_user = get_real_user()
+    if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
         
     db = get_db()
@@ -122,8 +122,8 @@ def admin_users_archive(user_id):
 
 @ui_app.post("/admin/utilisateurs/<user_id:int>/unarchive")
 def admin_users_unarchive(user_id):
-    current_user = get_current_user()
-    if not is_admin(current_user):
+    real_user = get_real_user()
+    if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
         
     db = get_db()
@@ -138,8 +138,8 @@ def admin_users_unarchive(user_id):
 
 @ui_app.get("/admin/chantiers-users")
 def admin_chantiers_users():
-    current_user = get_current_user()
-    if not is_admin(current_user):
+    real_user = get_real_user()
+    if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
         
     uid = request.query.get('uid')
@@ -180,8 +180,8 @@ def admin_chantiers_users():
 
 @ui_app.post("/admin/chantiers-users/assign")
 def admin_chantiers_users_assign():
-    current_user = get_current_user()
-    if not is_admin(current_user):
+    real_user = get_real_user()
+    if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
         
     uid = request.forms.get('uid')
