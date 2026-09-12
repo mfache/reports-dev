@@ -558,6 +558,52 @@ def dev_sync_db():
         return {"error": f"Exception : {str(e)}"}
 
 
+
+import subprocess
+import os
+import signal
+
+SIMULATOR_PID_FILE = "/tmp/reports_simulator.pid"
+
+def get_simulator_pid():
+    if os.path.exists(SIMULATOR_PID_FILE):
+        try:
+            with open(SIMULATOR_PID_FILE, 'r') as f:
+                pid = int(f.read().strip())
+            os.kill(pid, 0)
+            return pid
+        except (ValueError, OSError):
+            os.remove(SIMULATOR_PID_FILE)
+    return None
+
+@ui_app.post("/dev/simulator/toggle")
+def toggle_simulator():
+    pid = get_simulator_pid()
+    if pid:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+        if os.path.exists(SIMULATOR_PID_FILE):
+            os.remove(SIMULATOR_PID_FILE)
+        return {"status": "stopped"}
+    else:
+        import sys
+        script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'tools', 'simulateur_ui.py')
+        
+        # Transmet les variables d'environnement actuelles du processus uWSGI
+        # (incluant potentiellement les identifiants DB déjà décodés ou le DB_ENV_FILE autorisé)
+        env = os.environ.copy()
+        
+        proc = subprocess.Popen([sys.executable, script_path], env=env)
+        with open(SIMULATOR_PID_FILE, 'w') as f:
+            f.write(str(proc.pid))
+        return {"status": "started"}
+
+@ui_app.get("/dev/simulator/status")
+def simulator_status():
+    return {"status": "started" if get_simulator_pid() else "stopped"}
+
 @ui_app.get("/dev")
 def dev():
     tab = request.query.get("tab", "sql")

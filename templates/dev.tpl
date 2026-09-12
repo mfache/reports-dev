@@ -3,7 +3,62 @@
     <div>
         <h2>🛠️ Espace Développeur</h2>
         <p class="hint">Outils de diagnostic, introspection de la base de données et documentation API.</p>
+    
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <div id="sim-status" style="font-family: var(--font-mono); font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.1); color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+            <span class="material-symbols-outlined icon-sm">sync</span> Chargement...
+        </div>
+        <button id="sim-btn" onclick="toggleSimulator()" class="btn-primary" style="background: var(--surface-low); border: 1px solid var(--outline); color: var(--text); padding: 8px 16px;">
+            <span class="material-symbols-outlined icon-sm">sensors</span> 
+            <span id="sim-btn-text">Démarrer Simulateur</span>
+        </button>
     </div>
+
+    <script>
+    async function checkSimStatus() {
+        try {
+            const res = await fetch('{{BASE_PATH}}/dev/simulator/status');
+            const data = await res.json();
+            updateSimUI(data.status);
+        } catch (e) {
+            console.error("Erreur checkSimStatus", e);
+        }
+    }
+
+    function updateSimUI(status) {
+        const statusEl = document.getElementById('sim-status');
+        const btnText = document.getElementById('sim-btn-text');
+        
+        if (status === 'started') {
+            statusEl.innerHTML = '<span class="material-symbols-outlined icon-sm" style="color: var(--secondary);">graphic_eq</span> Simulateur Actif';
+            statusEl.style.background = 'rgba(74, 225, 118, 0.1)';
+            statusEl.style.color = 'var(--secondary)';
+            btnText.innerText = 'Arrêter Simulateur';
+        } else {
+            statusEl.innerHTML = '<span class="material-symbols-outlined icon-sm">sync_disabled</span> Simulateur Arrêté';
+            statusEl.style.background = 'rgba(255, 255, 255, 0.1)';
+            statusEl.style.color = 'var(--text-muted)';
+            btnText.innerText = 'Démarrer Simulateur';
+        }
+    }
+
+    async function toggleSimulator() {
+        const btn = document.getElementById('sim-btn');
+        btn.disabled = true;
+        try {
+            const res = await fetch('{{BASE_PATH}}/dev/simulator/toggle', { method: 'POST' });
+            const data = await res.json();
+            updateSimUI(data.status);
+        } catch (e) {
+            alert("Erreur réseau");
+        }
+        btn.disabled = false;
+    }
+
+    // Vérifier l'état au chargement de la page
+    window.addEventListener('DOMContentLoaded', checkSimStatus);
+    </script>
+</div>
 </div>
 
 <div class="nav-tabs" style="border-left: none; background: var(--surface-low); margin-bottom: 24px; padding: 5px; border-radius: var(--radius-lg); display: inline-flex; gap: 5px;">
