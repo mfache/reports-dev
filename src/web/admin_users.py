@@ -142,4 +142,76 @@ def admin_chantiers_users():
     if not is_admin(current_user):
         raise HTTPError(403, "Accès refusé.")
         
-    return view('admin_chantiers_users', title="Affectation Chantiers")
+    uid = request.query.get('uid')
+    db = get_db()
+    users = []
+    chantiers = []
+    filtres = []
+    
+    try:
+        with db.cursor() as cur:
+            cur.execute("SELECT id, ref, nom FROM utilisateurs WHERE archive = 0 ORDER BY nom ASC")
+            users = cur.fetchall()
+            
+            cur.execute("SELECT id, ref, adresse FROM chantiers WHERE archive = 0 ORDER BY ref ASC")
+            chantiers = cur.fetchall()
+            
+            if uid and uid.isdigit():
+                cur.execute("""
+                    SELECT f.id, f.chantiers_id, c.ref as chantier_ref, f.ref as filtre_ref, f.description, f.tri 
+                    FROM filtres f 
+                    JOIN chantiers c ON f.chantiers_id = c.id 
+                    WHERE f.utilisateurs_id = %s AND f.archive = 0
+                    ORDER BY f.tri ASC
+                """, (int(uid),))
+                filtres = cur.fetchall()
+    finally:
+        db.close()
+        
+    return view('admin_chantiers_users', title="Affectation Chantiers", users=users, chantiers=chantiers, filtres=filtres, selected_uid=uid)
+
+@ui_app.post("/admin/chantiers-users/add")
+def admin_chantiers_users_add():
+    current_user = get_current_user()
+    if not is_admin(current_user):
+        raise HTTPError(403, "Accès refusé.")
+        
+    uid = request.forms.get('uid')
+    chantier_id = request.forms.get('chantier_id')
+    filtre_ref = request.forms.get('filtre_ref', '').strip()
+    description = request.forms.get('description', '').strip()
+    tri = request.forms.get('tri', 0)
+    
+    if not uid or not chantier_id:
+        redirect(f"{BASE_PATH}/admin/chantiers-users")
+        
+    db = get_db()
+    try:
+        with db.cursor() as cur:
+            cur.execute("""
+                INSERT INTO filtres (utilisateurs_id, chantiers_id, ref, description, tri)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (uid, chantier_id, filtre_ref, description, tri))
+        db.commit()
+    finally:
+        db.close()
+        
+    redirect(f"{BASE_PATH}/admin/chantiers-users?uid={uid}")
+
+@ui_app.post("/admin/chantiers-users/delete/<filtre_id:int>")
+def admin_chantiers_users_delete(filtre_id):
+    current_user = get_current_user()
+    if not is_admin(current_user):
+        raise HTTPError(403, "Accès refusé.")
+        
+    uid = request.forms.get('uid')
+    
+    db = get_db()
+    try:
+        with db.cursor() as cur:
+            cur.execute("DELETE FROM filtres WHERE id = %s", (filtre_id,))
+        db.commit()
+    finally:
+        db.close()
+        
+    redirect(f"{BASE_PATH}/admin/chantiers-users?uid={uid}")
