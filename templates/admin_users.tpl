@@ -1,4 +1,4 @@
-% rebase('layout.tpl', title=title)
+
 <div class="header-with-actions">
     <div>
         <h2>👥 Gestion des Utilisateurs</h2>
