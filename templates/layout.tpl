@@ -161,6 +161,16 @@
                     </span>
                     <ul class="sub-nav">
                         <li>
+                            <a href="{{BASE_PATH}}/admin/utilisateurs" class="{{'active' if '/admin/utilisateurs' in request_path else ''}}">
+                                <span class="material-symbols-outlined">group</span> Gestion Utilisateurs
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{BASE_PATH}}/admin/chantiers-users" class="{{'active' if '/admin/chantiers-users' in request_path else ''}}">
+                                <span class="material-symbols-outlined">assignment_ind</span> Affectation Chantiers
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{BASE_PATH}}/maintenance/templates" class="{{'active' if '/maintenance/templates' in request_path else ''}}">
                                 <span class="material-symbols-outlined">library_books</span> Templates Modbus
                             </a>

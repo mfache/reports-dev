@@ -699,3 +699,4 @@ def dev():
 # pour y enregistrer ses routes.
 from web import stream as _stream  # noqa: E402,F401
 from services import templates_maintenance as _templates_maintenance  # noqa: E402,F401
+from web import admin_users as _admin_users  # noqa: E402,F401
