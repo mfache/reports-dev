@@ -514,7 +514,8 @@ def nodes_view():
                 boitiers=boitiers,
                 trends_count=trends_count,
                 config_count=config_count,
-                format_human_date=format_human_date)
+                format_human_date=format_human_date,
+                datetime=datetime)
 
 
 @ui_app.post("/sql")
