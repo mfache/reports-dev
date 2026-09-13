@@ -32,7 +32,7 @@ def global_sse():
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_message = on_message
-    
+
     try:
         client.connect("127.0.0.1", 1883, 60)
         client.subscribe("reports/sse/updates")
@@ -42,7 +42,7 @@ def global_sse():
 
     def generate():
         yield "event: ping\ndata: connected\n\n"
-        
+
         try:
             while True:
                 try:
@@ -87,7 +87,7 @@ def chantier_sse(chantier_id):
     # Connexion du client MQTT spécifique à ce flux SSE
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_message = on_message
-    
+
     try:
         client.connect("127.0.0.1", 1883, 60)
         # On s'abonne aux mises à jour générales ET aux mises à jour spécifiques à ce client
@@ -100,17 +100,17 @@ def chantier_sse(chantier_id):
     def generate():
         # Ping initial pour confirmer la connexion au frontend
         yield "event: ping\ndata: connected\n\n"
-        
+
         # Si on a généré un nouvel UUID, on le transmet immédiatement au client
         if new_uuid_generated:
             yield f"event: uuid\ndata: {client_uuid}\n\n"
-        
+
         try:
             while True:
                 # Récupère le prochain message avec un timeout pour éviter un blocage total
                 # Le timeout permet de vérifier régulièrement si le client web a fermé la connexion
                 try:
-                    msg = q.get(timeout=5)
+                    msg = q.get(timeout=2)
                     # msg contient déjà le JSON prêt à l'emploi
                     yield f"data: {msg}\n\n"
                 except queue.Empty:
@@ -122,4 +122,3 @@ def chantier_sse(chantier_id):
             client.disconnect()
 
     return generate()
-
