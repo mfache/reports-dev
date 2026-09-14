@@ -39,7 +39,7 @@ def admin_users_edit():
     if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
     
-    data = request.forms
+    data = request.forms.decode('utf-8')
     ref = data.get('ref', '').strip()
     nom = data.get('nom', '').strip()
     emails = [e.strip() for e in data.get('emails', '').split(',') if e.strip()]
@@ -74,7 +74,7 @@ def admin_users_update(user_id):
     if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
         
-    data = request.forms
+    data = request.forms.decode('utf-8')
     ref = data.get('ref', '').strip()
     nom = data.get('nom', '').strip()
     emails = [e.strip() for e in data.get('emails', '').split(',') if e.strip()]
@@ -184,9 +184,10 @@ def admin_chantiers_users_assign():
     if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
         
-    uid = request.forms.get('uid')
-    chantier_id = request.forms.get('chantier_id')
-    new_uid = request.forms.get('new_uid')
+    data = request.forms.decode('utf-8')
+    uid = data.get('uid')
+    chantier_id = data.get('chantier_id')
+    new_uid = data.get('new_uid')
     
     if not chantier_id or not new_uid:
         redirect(f"{BASE_PATH}/admin/chantiers-users?uid={uid or ''}")
@@ -237,7 +238,7 @@ def admin_chantiers_create():
     if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
     
-    data = request.forms
+    data = request.forms.decode('utf-8')
     ref = data.get('ref', '').strip()
     adresse = data.get('adresse', '').strip() or None
     geolocalisation = data.get('geolocalisation', '').strip() or None
@@ -270,7 +271,7 @@ def admin_chantiers_update(chantier_id):
     if not is_admin(real_user):
         raise HTTPError(403, "Accès refusé.")
         
-    data = request.forms
+    data = request.forms.decode('utf-8')
     ref = data.get('ref', '').strip()
     adresse = data.get('adresse', '').strip() or None
     geolocalisation = data.get('geolocalisation', '').strip() or None
