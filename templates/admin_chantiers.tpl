@@ -264,17 +264,40 @@ function initOrUpdateMapPicker() {
     let lat = 50.8503;
     let lng = 4.3517;
     let zoom = 8;
+    let hasCoords = false;
 
-    const val = document.getElementById(activeGeoInputId).value.trim();
-    if (val && val.includes(',')) {
-        const parts = val.split(',').map(p => parseFloat(p.trim()));
+    const geoVal = document.getElementById(activeGeoInputId) ? document.getElementById(activeGeoInputId).value.trim() : '';
+    const addrVal = document.getElementById(activeAddressInputId) ? document.getElementById(activeAddressInputId).value.trim() : '';
+
+    if (geoVal && geoVal.includes(',')) {
+        const parts = geoVal.split(',').map(p => parseFloat(p.trim()));
         if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
             lat = parts[0];
             lng = parts[1];
             zoom = 15;
+            hasCoords = true;
         }
     }
 
+    setMapPosition(lat, lng, zoom);
+
+    if (!hasCoords && addrVal) {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addrVal)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const searchLat = parseFloat(data[0].lat);
+                    const searchLng = parseFloat(data[0].lon);
+                    if (!isNaN(searchLat) && !isNaN(searchLng)) {
+                        setMapPosition(searchLat, searchLng, 15);
+                    }
+                }
+            })
+            .catch(() => {});
+    }
+}
+
+function setMapPosition(lat, lng, zoom) {
     selectedLat = lat;
     selectedLng = lng;
 
