@@ -29,3 +29,14 @@ def test_chantier_rename_sans_jeton_est_refuse(wsgi_app, base_path):
         headers={"Content-Type": "application/json"},
     )
     assert status == "401 Unauthorized"
+
+
+def test_chantier_ui_details_page_loads(wsgi_app, base_path):
+    status, _, body = call_wsgi(wsgi_app, f"{base_path}/chantier/9")
+    assert status == "200 OK"
+    assert 'boitiers-container' in body
+
+
+def test_chantier_ui_boitiers_fragment_loads(wsgi_app, base_path):
+    status, _, body = call_wsgi(wsgi_app, f"{base_path}/chantier/9/boitiers")
+    assert status == "200 OK"

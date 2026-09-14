@@ -295,6 +295,31 @@ def chantier_details(chantier_id):
 
             if not chantier:
                 return error404_ui(None)
+    finally:
+        db.close()
+
+    chart_param = request.query.get("chart")
+    manifest_url = f"{BASE_PATH}/manifest.json"
+    if chart_param:
+        encoded_start = urllib.parse.quote(f"{BASE_PATH}/chantier/{chantier_id}?chart={chart_param}")
+        manifest_url = f"{BASE_PATH}/manifest.json?start={encoded_start}"
+
+    return view('chantier',
+                title=f"Chantier {chantier['ref']} - Deltathermic",
+                chantier=chantier,
+                manifest_url=manifest_url)
+
+
+@ui_app.get("/chantier/<chantier_id:int>/boitiers")
+def chantier_boitiers(chantier_id):
+    db = get_db()
+    try:
+        with db.cursor() as cur:
+            cur.execute("SELECT id, ref FROM chantiers WHERE id = %s", (chantier_id,))
+            chantier = cur.fetchone()
+
+            if not chantier:
+                return error404_ui(None)
 
             # Get boitiers for this chantier
             cur.execute('''
@@ -307,6 +332,7 @@ def chantier_details(chantier_id):
 
             boitiers = {row['hostname']: {'tailscale_name': row['tailscale_name'], 'points': []} for row in boitiers_rows}
 
+            bacnet_aliases = {}
             if boitiers_rows:
                 hostnames = [row['hostname'] for row in boitiers_rows]
                 format_strings = ','.join(['%s'] * len(hostnames))
@@ -328,30 +354,27 @@ def chantier_details(chantier_id):
                 ''', tuple(hostnames) + (str(chantier['id']), chantier['ref']) + tuple(hostnames) + (str(chantier['id']), chantier['ref']))
                 points = cur.fetchall()
 
-                # Fetch trends count, last value, and previous value
+                # Fetch trend stats using window function ROW_NUMBER
                 cur.execute(f'''
-                    SELECT t1.boitier_id, t1.protocol, t1.device, t1.obj, t2.c as trend_count, t1.value as current_val,
-                           (SELECT value FROM boitier_trends t_sub
-                            WHERE t_sub.boitier_id = t1.boitier_id
-                              AND t_sub.protocol = t1.protocol
-                              AND t_sub.device = t1.device
-                              AND t_sub.obj = t1.obj
-                              AND t_sub.site IN (%s, %s)
-                              AND t_sub.timestamp < t2.max_ts
-                            ORDER BY t_sub.timestamp DESC LIMIT 1) as previous_val
-                    FROM boitier_trends t1
-                    INNER JOIN (
-                        SELECT boitier_id, protocol, device, obj, COUNT(*) as c, MAX(timestamp) as max_ts
+                    WITH ranked AS (
+                        SELECT boitier_id, protocol, device, obj, value, timestamp,
+                               ROW_NUMBER() OVER (PARTITION BY boitier_id, protocol, device, obj ORDER BY timestamp DESC) as rn,
+                               COUNT(*) OVER (PARTITION BY boitier_id, protocol, device, obj) as trend_count
                         FROM boitier_trends
                         WHERE boitier_id IN ({format_strings}) AND site IN (%s, %s)
-                        GROUP BY boitier_id, protocol, device, obj
-                    ) t2 ON t1.boitier_id = t2.boitier_id
-                        AND t1.protocol = t2.protocol
-                        AND t1.device = t2.device
-                        AND t1.obj = t2.obj
-                        AND t1.timestamp = t2.max_ts
-                    WHERE t1.site IN (%s, %s)
-                ''', (str(chantier['id']), chantier['ref']) + tuple(hostnames) + (str(chantier['id']), chantier['ref']) + (str(chantier['id']), chantier['ref']))
+                    )
+                    SELECT 
+                        r1.boitier_id, r1.protocol, r1.device, r1.obj, r1.trend_count,
+                        r1.value as current_val,
+                        r2.value as previous_val
+                    FROM ranked r1
+                    LEFT JOIN ranked r2 ON r1.boitier_id = r2.boitier_id 
+                                       AND r1.protocol = r2.protocol 
+                                       AND r1.device = r2.device 
+                                       AND r1.obj = r2.obj 
+                                       AND r2.rn = 2
+                    WHERE r1.rn = 1
+                ''', tuple(hostnames) + (str(chantier['id']), chantier['ref']))
 
                 trend_data = {(r['boitier_id'], r['protocol'], str(r['device']), str(r['obj'])): r for r in cur.fetchall()}
 
@@ -366,31 +389,24 @@ def chantier_details(chantier_id):
                         p['trend_count'] = 0
                         p['last_value'] = None
                         p['trend_dir'] = ""
-                    boitiers[p['boitier_id']]['points'].append(p)
+                    if p['boitier_id'] in boitiers:
+                        boitiers[p['boitier_id']]['points'].append(p)
 
-            # Get aliases for bacnet devices
-            cur.execute('''
-                SELECT device_instance as entry_key, alias as value
-                FROM chantier_bacnet_aliases
-                WHERE chantier_id = %s
-            ''', (chantier_id,))
-            bacnet_aliases = {row['entry_key']: row['value'] for row in cur.fetchall()}
+                # Get aliases for bacnet devices
+                cur.execute('''
+                    SELECT device_instance as entry_key, alias as value
+                    FROM chantier_bacnet_aliases
+                    WHERE chantier_id = %s
+                ''', (chantier_id,))
+                bacnet_aliases = {row['entry_key']: row['value'] for row in cur.fetchall()}
 
     finally:
         db.close()
 
-    chart_param = request.query.get("chart")
-    manifest_url = f"{BASE_PATH}/manifest.json"
-    if chart_param:
-        encoded_start = urllib.parse.quote(f"{BASE_PATH}/chantier/{chantier_id}?chart={chart_param}")
-        manifest_url = f"{BASE_PATH}/manifest.json?start={encoded_start}"
-
-    return view('chantier',
-                title=f"Chantier {chantier['ref']} - Deltathermic",
-                chantier=chantier,
-                boitiers=boitiers,
-                bacnet_aliases=bacnet_aliases,
-                manifest_url=manifest_url)
+    return render('chantier_boitiers',
+                  chantier=chantier,
+                  boitiers=boitiers,
+                  bacnet_aliases=bacnet_aliases)
 
 
 
