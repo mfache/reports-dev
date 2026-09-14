@@ -8,6 +8,9 @@
     <title>{{ get('title', 'Chantiers - Deltathermic') }}</title>
     
     <link rel="manifest" href="{{get('manifest_url', BASE_PATH + '/manifest.json')}}">
+    <link rel="icon" type="image/x-icon" href="{{BASE_PATH}}/static/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{BASE_PATH}}/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{BASE_PATH}}/static/favicon-16x16.png">
     <link rel="apple-touch-icon" href="{{BASE_PATH}}/static/dticon.png">
     
     <!-- Design System Fonts & Icons -->

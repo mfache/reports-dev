@@ -86,6 +86,11 @@ def serve_static(filepath):
     return static_file(filepath, root=str(STATIC_DIR))
 
 
+@ui_app.get("/favicon.ico")
+def serve_favicon():
+    return static_file("favicon.ico", root=str(STATIC_DIR))
+
+
 @ui_app.get("/sw.js")
 def serve_sw():
     res = static_file("sw.js", root=str(STATIC_DIR), mimetype="application/javascript")
