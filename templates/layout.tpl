@@ -87,7 +87,7 @@
                 <div class="host-info">
                     <div class="host-title-row">
                         <h2 class="host-name">REPORTS SERVER</h2>
-                        <span id="sse_api_activity" title="Activité API" class="pulse-dot"></span>
+                        <span id="sse_api_activity" title="Activité API" class="pulse-dot" style="opacity: 0;"></span>
                         <span class="htmx-indicator" style="font-size:0.8rem; margin-left: 5px; color: var(--primary);">⏳</span>
                     </div>
                     <div class="host-telemetry">
@@ -211,28 +211,19 @@
           if (globalAppSSE) return;
           globalAppSSE = new EventSource('{{BASE_PATH}}/reports_sse');
 
-          globalAppSSE.onopen = () => {
-              const dot = document.getElementById('sse_api_activity');
-              if (dot) {
-                  dot.style.backgroundColor = '';
-                  dot.style.boxShadow = '';
-              }
-          };
-
           globalAppSSE.onmessage = (event) => {
               try {
                   const payload = JSON.parse(event.data);
                   if (payload.api_activity) {
                       const dot = document.getElementById('sse_api_activity');
                       if (dot) {
-                          dot.style.backgroundColor = 'var(--primary)';
-                          dot.style.boxShadow = 'var(--glow-primary)';
-                          dot.style.transform = 'scale(1.3)';
+                          dot.style.transition = 'none';
+                          dot.style.opacity = '1';
+                          dot.offsetHeight; // Force reflow
                           setTimeout(() => {
-                              dot.style.backgroundColor = '';
-                              dot.style.boxShadow = '';
-                              dot.style.transform = '';
-                          }, 800);
+                              dot.style.transition = 'opacity 1s ease-out';
+                              dot.style.opacity = '0';
+                          }, 100);
                       }
                   }
               } catch (e) {}
@@ -241,8 +232,8 @@
           globalAppSSE.onerror = () => {
               const dot = document.getElementById('sse_api_activity');
               if (dot) {
-                  dot.style.backgroundColor = 'var(--outline-variant)';
-                  dot.style.boxShadow = 'none';
+                  dot.style.transition = 'opacity 0.3s ease';
+                  dot.style.opacity = '0';
               }
           };
       }

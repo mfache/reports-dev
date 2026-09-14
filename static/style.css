@@ -216,8 +216,8 @@ h3 {
     background-color: var(--secondary);
     border-radius: 50%;
     display: inline-block;
-    box-shadow: var(--glow-secondary);
-    transition: all 0.3s ease;
+    box-shadow: 0 0 8px var(--secondary), 0 0 16px rgba(74, 225, 118, 0.4);
+    transition: opacity 1s ease-out;
 }
 
 .sync-warn-dot {
