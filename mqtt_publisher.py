@@ -32,8 +32,8 @@ try:
         client.publish("reports/sse/updates", json.dumps(data))
         # print(f"Publié: {data}")
 
-        # Attente de 5 secondes avant le prochain envoi
-        time.sleep(5)
+        # Attente de 2 secondes avant le prochain envoi
+        time.sleep(2)
 except KeyboardInterrupt:
     print("Arrêt demandé par l'utilisateur")
 finally:

@@ -214,7 +214,7 @@
           globalAppSSE.onmessage = (event) => {
               try {
                   const payload = JSON.parse(event.data);
-                  if (payload.api_activity) {
+                  if (payload.api_activity || payload.heartbeat || payload.action === 'ping') {
                       const dot = document.getElementById('sse_api_activity');
                       if (dot) {
                           dot.style.transition = 'none';
