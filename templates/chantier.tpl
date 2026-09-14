@@ -30,7 +30,6 @@
         </a>
         <div>
             <h2 style="margin: 0;">🏢 Chantier : <span class="text-primary">{{chantier['ref']}}</span></h2>
-            <p class="hint" style="margin: 0;">{{chantier['adresse'] or 'Adresse non renseignée'}}</p>
         </div>
     </div>
     <div style="display: flex; gap: 10px;">
@@ -42,18 +41,31 @@
     </div>
 </div>
 
-<div class="stats-banner" style="justify-content: flex-start; gap: 40px;">
-    <div class="stat-item" style="text-align: left;">
-        <div class="stat-lbl">Chargé d'affaires</div>
-        <div class="stat-val" style="font-size: 1.1rem; color: var(--on-surface);">{{chantier['charge_affaires'] or 'Non assigné'}}</div>
+<div class="card" style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--outline-variant); padding-bottom: 12px;">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+            <span class="material-symbols-outlined text-primary">info</span>
+            Informations du chantier
+        </h3>
     </div>
-    % if chantier['cell_enodeb']:
-    <div class="stat-divider"></div>
-    <div class="stat-item" style="text-align: left;">
-        <div class="stat-lbl">Antenne LTE (eNodeB)</div>
-        <div class="stat-val font-mono" style="font-size: 1rem; color: var(--tertiary);">{{chantier['cell_enodeb']}} <small style="font-size: 0.7rem; color: var(--outline);">({{chantier['cell_mcc']}}-{{chantier['cell_mnc']}})</small></div>
+    <div class="stats-banner" style="justify-content: flex-start; gap: 40px; margin-bottom: 0; background: transparent; border: none; padding: 0;">
+        <div class="stat-item" style="text-align: left;">
+            <div class="stat-lbl">Adresse</div>
+            <div class="stat-val" style="font-size: 1rem; color: var(--on-surface);">{{chantier['adresse'] or 'Adresse non renseignée'}}</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item" style="text-align: left;">
+            <div class="stat-lbl">Chargé d'affaires</div>
+            <div class="stat-val" style="font-size: 1rem; color: var(--on-surface);">{{chantier['charge_affaires'] or 'Non assigné'}}</div>
+        </div>
+        % if chantier.get('cell_enodeb'):
+        <div class="stat-divider"></div>
+        <div class="stat-item" style="text-align: left;">
+            <div class="stat-lbl">Antenne LTE (eNodeB)</div>
+            <div class="stat-val font-mono" style="font-size: 1rem; color: var(--tertiary);">{{chantier['cell_enodeb']}} <small style="font-size: 0.7rem; color: var(--outline);">({{chantier.get('cell_mcc','')}}-{{chantier.get('cell_mnc','')}})</small></div>
+        </div>
+        % end
     </div>
-    % end
 </div>
 
 <div id="boitiers-container"
