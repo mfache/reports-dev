@@ -72,6 +72,7 @@
      style="width: 100%;"
      hx-get="{{BASE_PATH}}/chantier/{{chantier['id']}}/boitiers"
      hx-trigger="load"
+     hx-target="this"
      hx-swap="innerHTML">
     <div class="card luminescent-border" style="text-align: center; padding: 40px; color: var(--on-surface-variant);">
         <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
