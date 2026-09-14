@@ -217,7 +217,7 @@ h3 {
     border-radius: 50%;
     display: inline-block;
     box-shadow: var(--glow-secondary);
-    transition: opacity 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .sync-warn-dot {

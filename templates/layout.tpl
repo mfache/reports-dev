@@ -87,7 +87,7 @@
                 <div class="host-info">
                     <div class="host-title-row">
                         <h2 class="host-name">REPORTS SERVER</h2>
-                        <span id="sse_api_activity" title="Activité API" class="pulse-dot" style="background-color: var(--outline-variant); box-shadow: none;"></span>
+                        <span id="sse_api_activity" title="Activité API" class="pulse-dot"></span>
                         <span class="htmx-indicator" style="font-size:0.8rem; margin-left: 5px; color: var(--primary);">⏳</span>
                     </div>
                     <div class="host-telemetry">
@@ -211,21 +211,39 @@
           if (globalAppSSE) return;
           globalAppSSE = new EventSource('{{BASE_PATH}}/reports_sse');
 
+          globalAppSSE.onopen = () => {
+              const dot = document.getElementById('sse_api_activity');
+              if (dot) {
+                  dot.style.backgroundColor = '';
+                  dot.style.boxShadow = '';
+              }
+          };
+
           globalAppSSE.onmessage = (event) => {
               try {
                   const payload = JSON.parse(event.data);
                   if (payload.api_activity) {
                       const dot = document.getElementById('sse_api_activity');
                       if (dot) {
-                          dot.style.backgroundColor = 'var(--secondary)';
-                          dot.style.boxShadow = 'var(--glow-secondary)';
+                          dot.style.backgroundColor = 'var(--primary)';
+                          dot.style.boxShadow = 'var(--glow-primary)';
+                          dot.style.transform = 'scale(1.3)';
                           setTimeout(() => {
-                              dot.style.backgroundColor = 'var(--outline-variant)';
-                              dot.style.boxShadow = 'none';
+                              dot.style.backgroundColor = '';
+                              dot.style.boxShadow = '';
+                              dot.style.transform = '';
                           }, 800);
                       }
                   }
               } catch (e) {}
+          };
+
+          globalAppSSE.onerror = () => {
+              const dot = document.getElementById('sse_api_activity');
+              if (dot) {
+                  dot.style.backgroundColor = 'var(--outline-variant)';
+                  dot.style.boxShadow = 'none';
+              }
           };
       }
       initGlobalAppSSE();
