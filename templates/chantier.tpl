@@ -19,9 +19,8 @@
     tr.selected {
         background: rgba(76, 215, 246, 0.08) !important;
     }
-<style>
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-.spinning { animation: spin 1.5s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .spinning { animation: spin 1.5s linear infinite; }
 </style>
 
 <div class="header-with-actions">
@@ -58,9 +57,10 @@
 </div>
 
 <div id="boitiers-container"
+     style="width: 100%;"
      hx-get="{{BASE_PATH}}/chantier/{{chantier['id']}}/boitiers"
      hx-trigger="load"
-     hx-swap="outerHTML">
+     hx-swap="innerHTML">
     <div class="card luminescent-border" style="text-align: center; padding: 40px; color: var(--on-surface-variant);">
         <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
             <span class="material-symbols-outlined spinning" style="font-size: 28px; color: var(--primary);">sync</span>
