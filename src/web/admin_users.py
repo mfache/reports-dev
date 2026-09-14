@@ -200,3 +200,130 @@ def admin_chantiers_users_assign():
         db.close()
         
     redirect(f"{BASE_PATH}/admin/chantiers-users?uid={uid or ''}")
+
+
+@ui_app.get("/admin/chantiers")
+def admin_chantiers_list():
+    real_user = get_real_user()
+    if not is_admin(real_user):
+        raise HTTPError(403, "Accès refusé.")
+    
+    db = get_db()
+    chantiers = []
+    users = []
+    try:
+        with db.cursor() as cur:
+            cur.execute("""
+                SELECT c.*, u.nom as charge_affaires
+                FROM chantiers c
+                LEFT JOIN utilisateurs u ON c.utilisateurs_id = u.id
+                ORDER BY c.ref ASC
+            """)
+            chantiers = cur.fetchall()
+
+            cur.execute("SELECT id, ref, nom FROM utilisateurs WHERE archive = 0 ORDER BY nom ASC")
+            users = cur.fetchall()
+    finally:
+        db.close()
+        
+    active_chantiers = [c for c in chantiers if not c.get('archive')]
+    archived_chantiers = [c for c in chantiers if c.get('archive')]
+    return view('admin_chantiers', title="Gestion Chantiers", chantiers=active_chantiers, archived_chantiers=archived_chantiers, users=users)
+
+
+@ui_app.post("/admin/chantiers/create")
+def admin_chantiers_create():
+    real_user = get_real_user()
+    if not is_admin(real_user):
+        raise HTTPError(403, "Accès refusé.")
+    
+    data = request.forms
+    ref = data.get('ref', '').strip()
+    adresse = data.get('adresse', '').strip() or None
+    geolocalisation = data.get('geolocalisation', '').strip() or None
+    utilisateurs_id = data.get('utilisateurs_id')
+    if not utilisateurs_id or not str(utilisateurs_id).isdigit():
+        utilisateurs_id = real_user.get('id', 1)
+    else:
+        utilisateurs_id = int(utilisateurs_id)
+    
+    if not ref:
+        redirect(f"{BASE_PATH}/admin/chantiers")
+
+    db = get_db()
+    try:
+        with db.cursor() as cur:
+            cur.execute("""
+                INSERT INTO chantiers (ref, adresse, geolocalisation, utilisateurs_id)
+                VALUES (%s, %s, %s, %s)
+            """, (ref, adresse, geolocalisation, utilisateurs_id))
+        db.commit()
+    finally:
+        db.close()
+        
+    redirect(f"{BASE_PATH}/admin/chantiers")
+
+
+@ui_app.post("/admin/chantiers/<chantier_id:int>/update")
+def admin_chantiers_update(chantier_id):
+    real_user = get_real_user()
+    if not is_admin(real_user):
+        raise HTTPError(403, "Accès refusé.")
+        
+    data = request.forms
+    ref = data.get('ref', '').strip()
+    adresse = data.get('adresse', '').strip() or None
+    geolocalisation = data.get('geolocalisation', '').strip() or None
+    utilisateurs_id = data.get('utilisateurs_id')
+    if not utilisateurs_id or not str(utilisateurs_id).isdigit():
+        utilisateurs_id = real_user.get('id', 1)
+    else:
+        utilisateurs_id = int(utilisateurs_id)
+    
+    db = get_db()
+    try:
+        with db.cursor() as cur:
+            cur.execute("""
+                UPDATE chantiers 
+                SET ref=%s, adresse=%s, geolocalisation=%s, utilisateurs_id=%s
+                WHERE id=%s
+            """, (ref, adresse, geolocalisation, utilisateurs_id, chantier_id))
+        db.commit()
+    finally:
+        db.close()
+        
+    redirect(f"{BASE_PATH}/admin/chantiers")
+
+
+@ui_app.post("/admin/chantiers/<chantier_id:int>/archive")
+def admin_chantiers_archive(chantier_id):
+    real_user = get_real_user()
+    if not is_admin(real_user):
+        raise HTTPError(403, "Accès refusé.")
+        
+    db = get_db()
+    try:
+        with db.cursor() as cur:
+            cur.execute("UPDATE chantiers SET archive = 1 WHERE id = %s", (chantier_id,))
+        db.commit()
+    finally:
+        db.close()
+        
+    redirect(f"{BASE_PATH}/admin/chantiers")
+
+
+@ui_app.post("/admin/chantiers/<chantier_id:int>/unarchive")
+def admin_chantiers_unarchive(chantier_id):
+    real_user = get_real_user()
+    if not is_admin(real_user):
+        raise HTTPError(403, "Accès refusé.")
+        
+    db = get_db()
+    try:
+        with db.cursor() as cur:
+            cur.execute("UPDATE chantiers SET archive = 0 WHERE id = %s", (chantier_id,))
+        db.commit()
+    finally:
+        db.close()
+        
+    redirect(f"{BASE_PATH}/admin/chantiers")

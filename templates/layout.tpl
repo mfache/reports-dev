@@ -6,22 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0e1416">
     <title>{{ get('title', 'Chantiers - Deltathermic') }}</title>
-    
+
     <link rel="manifest" href="{{get('manifest_url', BASE_PATH + '/manifest.json')}}">
     <link rel="icon" type="image/x-icon" href="{{BASE_PATH}}/static/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="{{BASE_PATH}}/static/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="{{BASE_PATH}}/static/favicon-16x16.png">
     <link rel="apple-touch-icon" href="{{BASE_PATH}}/static/dticon.png">
-    
+
     <!-- Design System Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
-    
+
     <!-- Base Style (Kinetic Infrastructure) -->
     <link rel="stylesheet" href="{{BASE_PATH}}/static/style.css">
-    
+
     <script src="{{BASE_PATH}}/static/htmx.min.js"></script>
     <script>
         // Détection de la taille d'écran et stockage en cookie pour le serveur
@@ -84,9 +84,9 @@
                 <a href="{{BASE_PATH}}/" class="brand-link">
                     <img src="{{BASE_PATH}}/static/DELTA-Thermic-v3_reverse.png" alt="Deltathermic" class="brand-logo">
                 </a>
-                
+
                 <div class="header-divider"></div>
-                
+
                 <div class="host-info">
                     <div class="host-title-row">
                         <h2 class="host-name">REPORTS SERVER</h2>
@@ -126,7 +126,7 @@
                         </div>
                     % end
                 </div>
-                
+
                 <div class="header-actions">
                     <a href="/oauth2-google/sign_out?rd={{BASE_PATH}}/" class="btn-icon btn-icon-danger" title="Déconnexion" hx-boost="false">
                         <span class="material-symbols-outlined">power_settings_new</span>
@@ -169,6 +169,11 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{BASE_PATH}}/admin/chantiers" class="{{'active' if '/admin/chantiers' in request_path else ''}}">
+                                <span class="material-symbols-outlined">domain</span> Gestion Chantiers
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{BASE_PATH}}/admin/chantiers-users" class="{{'active' if '/admin/chantiers-users' in request_path else ''}}">
                                 <span class="material-symbols-outlined">assignment_ind</span> Affectation Chantiers
                             </a>
@@ -189,7 +194,7 @@
                 </li>
                 % end
             </ul>
-            
+
             <div style="margin-top: auto; padding: 20px; font-size: 0.7rem; color: var(--outline); text-align: center;">
                 Deltathermic &copy; 2026<br>Infrastructure Reports
             </div>
