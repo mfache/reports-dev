@@ -31,6 +31,32 @@
             </button>
         </div>
     </div>
+    
+    <!-- Bouton Live View -->
+    <div class="form-group" style="margin-bottom: 0; margin-left: auto;">
+        <label class="toggle-switch" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="live-view-{{hostname_safe}}" onchange="toggleLiveView(this, '{{chantier['id']}}', '{{hostname}}', '{{hostname_safe}}')" style="display: none;">
+            <div class="toggle-slider" style="width: 40px; height: 20px; background: var(--surface-highest); border-radius: 10px; position: relative; border: 1px solid var(--outline-variant); transition: background 0.3s;">
+                <div class="toggle-knob" style="width: 14px; height: 14px; background: var(--outline); border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.3s, background 0.3s;"></div>
+            </div>
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--on-surface-variant);"><span class="material-symbols-outlined icon-sm" style="vertical-align: middle; margin-right: 4px; color: var(--accent-orange);">sensors</span>Live View</span>
+            <span id="live-view-timer-{{hostname_safe}}" class="font-mono" style="display: none; font-size: 0.75rem; color: var(--accent-orange); min-width: 34px;" title="Arrêt automatique après 5 min (limite imposée par le boîtier)"></span>
+        </label>
+        
+        <style>
+            #live-view-{{hostname_safe}}:checked + .toggle-slider {
+                background: rgba(255, 184, 115, 0.2);
+                border-color: var(--accent-orange);
+            }
+            #live-view-{{hostname_safe}}:checked + .toggle-slider .toggle-knob {
+                transform: translateX(20px);
+                background: var(--accent-orange);
+            }
+        </style>
+    </div>
+</div>
+
+<div class="table-responsive">
     <div class="form-group" style="margin-bottom: 0; flex-grow: 1;">
         <label style="font-size: 0.75rem;">Recherche dans les points :</label>
         <div style="position: relative;">

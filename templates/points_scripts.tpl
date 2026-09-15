@@ -241,6 +241,124 @@ class SSEPointManager {
     }
 }
 
+// Le boîtier (rpi01) coupe lui-même la scrutation rapide après ce délai
+// (mécanisme volontaire côté matériel, pour ne pas le surcharger indéfiniment).
+// On reproduit ce délai côté interface pour que le bouton reflète l'état réel
+// même si personne ne clique pour arrêter manuellement.
+const LIVE_VIEW_MAX_DURATION_MS = 5 * 60 * 1000;
+
+// Minuteries actives, indexées par hostnameSafe : { intervalId, endTime }
+const liveViewTimers = {};
+
+function formatLiveViewRemaining(ms) {
+    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function stopLiveViewCountdown(hostnameSafe) {
+    const timer = liveViewTimers[hostnameSafe];
+    if (timer) {
+        clearInterval(timer.intervalId);
+        delete liveViewTimers[hostnameSafe];
+    }
+    const timerEl = document.getElementById('live-view-timer-' + hostnameSafe);
+    if (timerEl) {
+        timerEl.style.display = 'none';
+        timerEl.innerText = '';
+    }
+}
+
+function startLiveViewCountdown(chantierId, hostname, hostnameSafe) {
+    stopLiveViewCountdown(hostnameSafe);
+
+    const timerEl = document.getElementById('live-view-timer-' + hostnameSafe);
+    const endTime = Date.now() + LIVE_VIEW_MAX_DURATION_MS;
+
+    const tick = () => {
+        const remaining = endTime - Date.now();
+        if (remaining <= 0) {
+            stopLiveViewCountdown(hostnameSafe);
+            const checkbox = document.getElementById('live-view-' + hostnameSafe);
+            if (checkbox) {
+                checkbox.checked = false;
+            }
+            console.log(`[Live View] Arrêt automatique après 5 min pour ${hostname} (limite imposée par le boîtier).`);
+            // On notifie quand même le backend pour être sûr que le flux MQTT est bien coupé,
+            // sans bloquer ni alerter l'utilisateur en cas d'échec (le boîtier a de toute façon
+            // déjà coupé sa scrutation de son côté).
+            fetch(`{{BASE_PATH}}/chantier/${chantierId}/live-view`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ boitier_id: hostname, active: false, points: [] })
+            }).catch(() => {});
+            return;
+        }
+        if (timerEl) {
+            timerEl.style.display = 'inline';
+            timerEl.innerText = formatLiveViewRemaining(remaining);
+        }
+    };
+
+    tick();
+    const intervalId = setInterval(tick, 1000);
+    liveViewTimers[hostnameSafe] = { intervalId, endTime };
+}
+
+async function toggleLiveView(checkbox, chantierId, hostname, hostnameSafe) {
+    const isLive = checkbox.checked;
+    const protoFilter = document.getElementById('filter-proto-' + hostnameSafe)?.value || '';
+    const devFilter = document.getElementById('filter-dev-' + hostnameSafe)?.value || '';
+    
+    // On collecte les points actuellement visibles (ou tous si pas de filtre)
+    const points = [];
+    document.querySelectorAll(`tr[data-b="${hostname}"]`).forEach(row => {
+        if (row.style.display !== 'none') {
+            points.push({
+                protocol: row.getAttribute('data-protocol'),
+                device: row.getAttribute('data-device'),
+                obj: row.getAttribute('data-obj')
+            });
+        }
+    });
+
+    // Toute nouvelle action manuelle annule le compte à rebours précédent
+    // (redémarrage propre si on relance, arrêt propre si on coupe).
+    stopLiveViewCountdown(hostnameSafe);
+
+    try {
+        const res = await fetch(`{{BASE_PATH}}/chantier/${chantierId}/live-view`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                boitier_id: hostname,
+                active: isLive,
+                points: points
+            })
+        });
+        
+        const data = await res.json();
+        if (res.ok) {
+            console.log(`Live view ${isLive ? 'activé' : 'désactivé'} pour ${hostname}`);
+            if (isLive) {
+                // Le boîtier coupera de lui-même après LIVE_VIEW_MAX_DURATION_MS :
+                // on reflète ce délai sur le bouton pour ne pas laisser croire
+                // que le live view tourne encore une fois la limite atteinte.
+                startLiveViewCountdown(chantierId, hostname, hostnameSafe);
+            }
+        } else {
+            console.error("Erreur Live View:", data.error);
+            checkbox.checked = !isLive; // revert
+            alert("Erreur lors de l'activation du Live View: " + data.error);
+        }
+    } catch (e) {
+        console.error("Erreur réseau Live View:", e);
+        checkbox.checked = !isLive; // revert
+        alert("Erreur réseau.");
+    }
+}
+
 function startRealtimeCounts(chantierId) {
     const manager = new SSEPointManager('{{BASE_PATH}}', chantierId);
     manager.start();

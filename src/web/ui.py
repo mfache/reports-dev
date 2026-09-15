@@ -211,6 +211,38 @@ def chantier_counts(chantier_id):
 
     return diff
 
+@ui_app.post("/chantier/<chantier_id:int>/live-view")
+def chantier_live_view(chantier_id):
+    """
+    Déclenche ou arrête le mode Live View pour un boitier.
+    Publie un message MQTT que le RPI lira pour faire du fast-polling.
+    """
+    data = request.json or {}
+    boitier_id = data.get('boitier_id')
+    active = data.get('active', False)
+    points = data.get('points', [])
+    
+    if not boitier_id:
+        return {"error": "boitier_id manquant"}
+
+    # On utilise le broker mqtt local
+    import paho.mqtt.publish as mqtt_publish
+    import json
+    
+    topic = f"dt/cmd/{boitier_id}/live_view"
+    
+    payload = {
+        "action": "start" if active else "stop",
+        "interval": 1, # intervalle en secondes
+        "points": points
+    }
+    
+    try:
+        mqtt_publish.single(topic, json.dumps(payload), hostname="127.0.0.1")
+        return {"status": "ok", "message": f"Ordre MQTT envoyé sur {topic}"}
+    except Exception as e:
+        return {"error": f"Erreur MQTT: {str(e)}"}
+
 @ui_app.post("/chantier/<chantier_id:int>/chart-data")
 def chantier_chart_data(chantier_id):
     points = request.json or []
