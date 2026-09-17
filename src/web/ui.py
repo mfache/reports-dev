@@ -178,8 +178,8 @@ def chantier_counts(chantier_id):
         with db.cursor() as cur:
             cur.execute("SELECT ref FROM chantiers WHERE id = %s", (chantier_id,))
             c_row = cur.fetchone()
-            c_ref = c_row['ref'] if c_row else "" 
-            
+            c_ref = c_row['ref'] if c_row else ""
+
             cur.execute('''
                 SELECT t1.boitier_id, t1.protocol, t1.device, t1.obj, t2.c, t1.value
                 FROM boitier_trends t1
@@ -221,22 +221,22 @@ def chantier_live_view(chantier_id):
     boitier_id = data.get('boitier_id')
     active = data.get('active', False)
     points = data.get('points', [])
-    
+
     if not boitier_id:
         return {"error": "boitier_id manquant"}
 
     # On utilise le broker mqtt local
     import paho.mqtt.publish as mqtt_publish
     import json
-    
+
     topic = f"dt/cmd/{boitier_id}/live_view"
-    
+
     payload = {
         "action": "start" if active else "stop",
         "interval": 1, # intervalle en secondes
         "points": points
     }
-    
+
     try:
         mqtt_publish.single(topic, json.dumps(payload), hostname="127.0.0.1")
         return {"status": "ok", "message": f"Ordre MQTT envoyé sur {topic}"}
@@ -395,15 +395,15 @@ def chantier_boitiers(chantier_id):
                         FROM boitier_trends
                         WHERE boitier_id IN ({format_strings}) AND site IN (%s, %s)
                     )
-                    SELECT 
+                    SELECT
                         r1.boitier_id, r1.protocol, r1.device, r1.obj, r1.trend_count,
                         r1.value as current_val,
                         r2.value as previous_val
                     FROM ranked r1
-                    LEFT JOIN ranked r2 ON r1.boitier_id = r2.boitier_id 
-                                       AND r1.protocol = r2.protocol 
-                                       AND r1.device = r2.device 
-                                       AND r1.obj = r2.obj 
+                    LEFT JOIN ranked r2 ON r1.boitier_id = r2.boitier_id
+                                       AND r1.protocol = r2.protocol
+                                       AND r1.device = r2.device
+                                       AND r1.obj = r2.obj
                                        AND r2.rn = 2
                     WHERE r1.rn = 1
                 ''', tuple(hostnames) + (str(chantier['id']), chantier['ref']))
@@ -471,29 +471,29 @@ def chantier_purge(chantier_id):
                 if boitier_id:
                     if protocol:
                         cur.execute('''
-                            DELETE FROM boitier_trends 
+                            DELETE FROM boitier_trends
                             WHERE site IN (%s, %s) AND boitier_id = %s AND protocol = %s AND device = %s
                         ''', (site_values[0], site_values[1], boitier_id, protocol, device))
                     else:
                         cur.execute('''
-                            DELETE FROM boitier_trends 
+                            DELETE FROM boitier_trends
                             WHERE site IN (%s, %s) AND boitier_id = %s AND device = %s
                         ''', (site_values[0], site_values[1], boitier_id, device))
                 else:
                     cur.execute('''
-                        DELETE FROM boitier_trends 
+                        DELETE FROM boitier_trends
                         WHERE site IN (%s, %s) AND device = %s
                     ''', (site_values[0], site_values[1], device))
             else:
                 if hostnames:
                     format_strings = ','.join(['%s'] * len(hostnames))
                     cur.execute(f'''
-                        DELETE FROM boitier_trends 
+                        DELETE FROM boitier_trends
                         WHERE site IN (%s, %s) OR (boitier_id IN ({format_strings}) AND site IN (%s, %s))
                     ''', (site_values[0], site_values[1]) + tuple(hostnames) + (site_values[0], site_values[1]))
                 else:
                     cur.execute('''
-                        DELETE FROM boitier_trends 
+                        DELETE FROM boitier_trends
                         WHERE site IN (%s, %s)
                     ''', (site_values[0], site_values[1]))
 
@@ -597,15 +597,15 @@ def dev_sync_db():
     if BASE_PATH == "/reports":
         response.status = 403
         return {"error": "Interdit en production."}
-    
+
     import subprocess
     try:
         cmd = "sudo mysqldump --single-transaction --routines --triggers dt | sudo mysql dt_dev"
         res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        
+
         if res.returncode != 0:
             return {"error": f"Erreur de synchronisation : {res.stderr}"}
-            
+
         return {"status": "ok", "message": "La base de données de développement (dt_dev) a été synchronisée depuis la production."}
     except Exception as e:
         return {"error": f"Exception : {str(e)}"}
@@ -823,11 +823,11 @@ def toggle_simulator():
     else:
         import sys
         script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'tools', 'simulateur_ui.py')
-        
+
         # Transmet les variables d'environnement actuelles du processus uWSGI
         # (incluant potentiellement les identifiants DB déjà décodés ou le DB_ENV_FILE autorisé)
         env = os.environ.copy()
-        
+
         proc = subprocess.Popen([sys.executable, script_path], env=env)
         with open(SIMULATOR_PID_FILE, 'w') as f:
             f.write(str(proc.pid))
@@ -841,13 +841,13 @@ def simulator_status():
 def dev():
     tab = request.query.get("tab", "sql")
     data = {"tab": tab}
-    
+
     if tab == "sql":
         db = get_db()
         tables_info = {}
         foreign_keys = []
         tables = []
-        
+
         try:
             with db.cursor() as cur:
                 cur.execute("SHOW TABLES")
@@ -864,7 +864,10 @@ def dev():
                 # Détails de chaque table
                 for table in tables:
                     cur.execute(f"DESCRIBE {table}")
-                    tables_info[table] = cur.fetchall()
+                    cols = cur.fetchall()
+                    cur.execute(f"SELECT count(*) as count FROM {table}")
+                    count = cur.fetchone()['count']
+                    tables_info[table] = {'cols': cols, 'count': count}
         finally:
             db.close()
 
@@ -873,20 +876,20 @@ def dev():
         for fk in foreign_keys:
             mermaid_code += f"    {fk['REFERENCED_TABLE_NAME']} ||--o{{ {fk['TABLE_NAME']} : \"{fk['COLUMN_NAME']}\"\n"
 
-        for table, cols in tables_info.items():
+        for table, info in tables_info.items():
             mermaid_code += f"    {table} {{\n"
-            for col in cols:
+            for col in info['cols']:
                 pk = " PK" if col['Key'] == 'PRI' else (" FK" if col['Key'] == 'MUL' else "")
                 ctype = col['Type'].split('(')[0].replace(' ', '_').replace(',', '_')
                 mermaid_code += f"        {ctype} {col['Field']}{pk}\n"
             mermaid_code += "    }\n"
-            
+
         data.update({
             "tables": tables,
             "tables_info": tables_info,
             "mermaid_code": mermaid_code
         })
-            
+
     elif tab == "api":
         from web.api import api_app
         api_docs = []

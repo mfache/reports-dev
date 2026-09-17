@@ -149,11 +149,11 @@
     </script>
 
     <h2 style="margin-top: 48px;">📚 Liste des Tables ({{len(tables)}})</h2>
-    % for table, cols in tables_info.items():
+    % for table, info in tables_info.items():
         <div class="card">
             <h3 style="display: flex; align-items: center; gap: 10px;">
                 <span class="material-symbols-outlined text-secondary">table</span>
-                <code>{{table}}</code>
+                <code>{{table}}</code> ({{info['count']}} records)
             </h3>
             <div class="table-scroll">
                 <table class="data-table">
@@ -161,7 +161,7 @@
                         <tr><th>Champ</th><th>Type</th><th>Null</th><th>Clé</th><th>Défaut</th><th>Extra</th></tr>
                     </thead>
                     <tbody>
-                        % for col in cols:
+                        % for col in info['cols']:
                         <tr>
                             <td class="font-mono text-primary">{{col['Field']}}</td>
                             <td class="font-mono text-muted" style="font-size: 0.75rem;">{{col['Type']}}</td>
