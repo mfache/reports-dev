@@ -340,8 +340,17 @@ def sync():
             "chantier": {"id": 12, "ref": "Nom Site"},
             "net_profiles": [...],
             "modbus_templates": {...},
-            "annotations": [...]
+            "annotations": [...],
+            "mobile_access": [
+                {"token_hash": "...", "expire_at": "2026-09-19 13:29:40", "utilisateur_ref": "TOM"}
+            ]
         }
+
+        ``mobile_access`` liste les jetons d'acces mobile actuellement
+        valides pour CE boitier (emis via
+        POST /mobile/boitiers/<hostname>/access-token), a mettre en cache
+        localement pour valider les connexions de l'app mobile sans appel
+        reseau supplementaire (voir services/mobile.py).
     """
     db = get_db()
     try:
@@ -504,6 +513,33 @@ def sync():
                         "value": row["alias"]
                     })
 
+            # Liste blanche d'acces mobile pour CE boitier precis (voir
+            # docs/mobile/CAHIER_DES_CHARGES_APP_MOBILE.md section 14.4,
+            # depot rpinode). Jetons emis par
+            # POST /mobile/boitiers/<hostname>/access-token (services/mobile.py),
+            # stockes ici uniquement sous forme hachee (SHA-256), jamais en
+            # clair. Le boitier compare le jeton recu de l'app mobile (hache
+            # localement) a cette liste, mise en cache a chaque sync (~60s),
+            # sans avoir besoin d'un appel reseau supplementaire au moment de
+            # la consultation.
+            cur.execute(
+                """
+                SELECT uab.token_hash, uab.expire_at, u.ref AS utilisateur_ref
+                FROM utilisateurs_acces_boitier uab
+                JOIN utilisateurs u ON u.id = uab.utilisateur_id
+                WHERE uab.boitier_id = %s AND uab.expire_at > NOW()
+                """,
+                (boitier_id,),
+            )
+            mobile_access = [
+                {
+                    "token_hash": row["token_hash"],
+                    "expire_at": row["expire_at"],
+                    "utilisateur_ref": row["utilisateur_ref"],
+                }
+                for row in cur.fetchall()
+            ]
+
         if pushed_something:
             notify_fleet_change(data.get("hostname", "?"))
 
@@ -517,6 +553,7 @@ def sync():
                 "bacnet_templates": bacnet_templates,
                 "annotations": annotations,
                 "table_columns": table_columns,
+                "mobile_access": mobile_access,
             }
         )
     finally:
