@@ -1,5 +1,6 @@
 import datetime
 import secrets
+import threading
 from urllib.parse import quote
 
 from bottle import request, redirect, HTTPError
@@ -14,6 +15,39 @@ def is_admin(user):
     return user and user.get('is_admin', False)
 
 MOBILE_INVITE_EXPIRY = datetime.timedelta(hours=48)
+
+# Repli quand l'envoi SMTP echoue (cf. investigation authentification
+# Office 365, 2026-09-19) : le contenu de l'invitation est garde en
+# memoire cote serveur (jamais dans l'URL de redirection, sinon la
+# query string devient trop longue et provoque un 502 entre nginx et
+# uwsgi) et recupere une seule fois via un jeton court passe en
+# parametre. Un seul worker uwsgi tourne pour cette app (voir .ini,
+# pas de "processes"), donc un simple dict en memoire protege par un
+# verrou suffit.
+_PENDING_INVITE_COPIES = {}
+_PENDING_INVITE_LOCK = threading.Lock()
+_PENDING_INVITE_TTL = datetime.timedelta(minutes=15)
+
+
+def _store_pending_invite_copy(dest, body):
+    token = secrets.token_urlsafe(16)
+    now = datetime.datetime.now()
+    with _PENDING_INVITE_LOCK:
+        # Purge des entrees expirees au passage.
+        for key in [k for k, v in _PENDING_INVITE_COPIES.items() if now - v["created_at"] > _PENDING_INVITE_TTL]:
+            del _PENDING_INVITE_COPIES[key]
+        _PENDING_INVITE_COPIES[token] = {"dest": dest, "body": body, "created_at": now}
+    return token
+
+
+def _pop_pending_invite_copy(token):
+    if not token:
+        return None
+    with _PENDING_INVITE_LOCK:
+        entry = _PENDING_INVITE_COPIES.pop(token, None)
+    if not entry or datetime.datetime.now() - entry["created_at"] > _PENDING_INVITE_TTL:
+        return None
+    return entry
 
 @ui_app.get("/admin/utilisateurs")
 def admin_users_list():
@@ -41,8 +75,12 @@ def admin_users_list():
     archived_users = [u for u in users if u.get('archive')]
     invite_status = request.query.get('invite')
     invite_error = request.query.get('invite_error')
-    invite_copy_dest = request.query.get('invite_copy_dest')
-    invite_copy_body = request.query.get('invite_copy_body')
+    invite_copy_dest = None
+    invite_copy_body = None
+    pending = _pop_pending_invite_copy(request.query.get('invite_copy_token'))
+    if pending:
+        invite_copy_dest = pending["dest"]
+        invite_copy_body = pending["body"]
     return view(
         'admin_users', title="Gestion Utilisateurs", users=active_users,
         archived_users=archived_users, invite_status=invite_status,
@@ -237,10 +275,13 @@ def admin_users_mobile_invite(user_id):
         # authentification Office 365, 2026-09-19) : la cle est deja creee
         # et valide, on permet a l'admin de copier/coller le contenu pour
         # le transmettre manuellement (autre canal) plutot que de bloquer.
+        # Le contenu est garde cote serveur (voir _store_pending_invite_copy)
+        # et pas dans l'URL, qui deviendrait trop longue et causerait un
+        # 502 (limite de taille d'en-tete entre nginx et uwsgi).
+        token = _store_pending_invite_copy(destinataire, corps)
         params = (
             "invite_error=" + quote(f"Cle creee mais envoi email echoue : {str(exc)[:150]}")
-            + "&invite_copy_dest=" + quote(destinataire)
-            + "&invite_copy_body=" + quote(corps)
+            + "&invite_copy_token=" + token
         )
         redirect(f"{BASE_PATH}/admin/utilisateurs?{params}")
         return
