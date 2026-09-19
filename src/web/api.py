@@ -23,7 +23,7 @@ from web.responses import json_error, json_ok
 
 api_app = Bottle()
 
-API_VERSION = "1.2.1"
+API_VERSION = "1.3.0"
 
 # Chaque import ci-dessous enregistre ses routes sur api_app par effet de
 # bord (chaque module services/* fait `from web.api import api_app` puis
@@ -36,6 +36,7 @@ from services import sync as _sync  # noqa: E402,F401
 from services import trends as _trends  # noqa: E402,F401
 from services import logs as _logs  # noqa: E402,F401
 from services import headscale as _headscale  # noqa: E402,F401
+from services import mobile as _mobile  # noqa: E402,F401
 
 
 @api_app.get("/usage")
