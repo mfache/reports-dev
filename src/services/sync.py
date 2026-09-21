@@ -213,11 +213,23 @@ def _push_bacnet_templates(cur, boitier_id, boitier_hostname, templates):
         log_write(cur, boitier_id, "boitier_bacnet_templates", f"{name}:{rev_uuid}", "push")
 
 def _push_template_usage(cur, boitier_id, boitier_hostname, default_chantier_id, usages):
+    """
+    Enregistre quel appareil (device_name, ou device_instance pour BACnet)
+    utilise quelle revision de template. Sert de base a la resolution du
+    libelle (description) d'un point cote UI (chantier_boitiers), sans que
+    le boitier n'ait besoin de renvoyer ce libelle en double : voir
+    rpinode/docs/integrations/FLEET_API_CHANGES.md.
+
+    Le champ "protocol" existe depuis l'ajout du support BACnet (auparavant
+    seul Modbus etait couvert) ; les boitiers plus anciens qui ne l'envoient
+    pas encore sont traites comme "modbus" par defaut.
+    """
     cur.execute("DELETE FROM boitier_template_usage WHERE boitier_id=%s", (boitier_hostname,))
     for u in usages or []:
         tpl_uuid = str(u.get("template_uuid") or "")[:64]
         rev_uuid = str(u.get("revision_uuid") or "")[:64]
         dev_name = str(u.get("device_name") or "")[:128]
+        protocol = str(u.get("protocol") or "modbus")[:16]
         c_id = u.get("chantier_id") if u.get("chantier_id") is not None else default_chantier_id
         try:
             c_id = int(c_id or 0)
@@ -229,10 +241,10 @@ def _push_template_usage(cur, boitier_id, boitier_hostname, default_chantier_id,
 
         cur.execute(
             """INSERT INTO boitier_template_usage
-               (boitier_id, chantier_id, template_uuid, revision_uuid, device_name, last_reported_at)
-               VALUES (%s, %s, %s, %s, %s, NOW())
+               (boitier_id, chantier_id, protocol, template_uuid, revision_uuid, device_name, last_reported_at)
+               VALUES (%s, %s, %s, %s, %s, %s, NOW())
                ON DUPLICATE KEY UPDATE revision_uuid=VALUES(revision_uuid), last_reported_at=NOW()""",
-            (boitier_hostname, c_id, tpl_uuid, rev_uuid, dev_name),
+            (boitier_hostname, c_id, protocol, tpl_uuid, rev_uuid, dev_name),
         )
     log_write(cur, boitier_id, "boitier_template_usage", boitier_hostname, "push")
 
@@ -323,6 +335,28 @@ def sync():
             "site_hint_name": "Nom Site",
             "net_profiles": [...],
             "modbus_templates": {...},
+            "bacnet_templates": {...},
+            "template_usage": [
+                {
+                    "protocol": "modbus",
+                    "template_uuid": "...",
+                    "revision_uuid": "...",
+                    "device_name": "EASTRON",
+                    "chantier_id": 12
+                }
+            ],
+            "bacnet_points_catalog": [
+                {
+                    "chantier_id": 12,
+                    "network_address": "192.168.1.50",
+                    "device_instance": 1234,
+                    "object_id": "analog-value:55",
+                    "object_name": "Temp Ambiante Bureau"
+                }
+            ],
+            "table_columns": [
+                {"table_id": "ip_scan", "column_key": "room", "column_label": "Pièce"}
+            ],
             "annotations": [...]
         }
 
@@ -333,6 +367,26 @@ def sync():
           existant, l'antenne est rattachée à ce chantier au lieu de créer un doublon
           du type ``Nom Site-2``.
         - Le payload peut aussi être compressé en GZIP via ``Content-Encoding: gzip``.
+        - ``template_usage`` associe un appareil (``device_name`` ; pour BACnet,
+          il s'agit du ``device_instance`` converti en chaine, pas du nom) à la
+          revision de template qu'il utilise. Sert a resoudre le libelle des
+          points (colonne "Description" de la vue chantier) directement depuis
+          la definition du template deja partage, sans jamais dupliquer ce
+          libelle. Le champ ``protocol`` (``"modbus"`` ou ``"bacnet"``) est
+          obligatoire depuis le 20 septembre 2026 ; absent, il est traite comme
+          ``"modbus"`` par defaut pour compatibilite avec les anciens boitiers.
+        - ``bacnet_templates`` suit le meme schema versionne (template_uuid,
+          revision_uuid, parent_revision_uuid, name, manufacturer, version,
+          is_deprecated) que ``modbus_templates``, avec une definition au format
+          ``{"name": ..., "notes": ..., "objects": [{"obj": "analog-value:55",
+          "name": "Temp Ambiante"}, ...]}`` au lieu de ``reads``.
+        - ``bacnet_points_catalog`` alimente le dictionnaire global des points
+          BACnet decouverts (recherche par nom/joker sans re-scanner le reseau).
+          Chaque entree porte son propre ``chantier_id`` (le boitier peut avoir
+          change de chantier entre deux lots) : ne jamais supposer que c'est
+          celui resolu pour le reste de la requete.
+        - ``table_columns`` declare des colonnes personnalisees pour une table
+          d'IHM donnee (ex. ``ip_scan``), partagees entre boitiers.
 
     Réponse:
         {
@@ -340,11 +394,19 @@ def sync():
             "chantier": {"id": 12, "ref": "Nom Site"},
             "net_profiles": [...],
             "modbus_templates": {...},
+            "bacnet_templates": {...},
             "annotations": [...],
+            "table_columns": [
+                {"table_id": "ip_scan", "column_key": "room", "column_label": "Pièce"}
+            ],
             "mobile_access": [
                 {"token_hash": "...", "expire_at": "2026-09-19 13:29:40", "utilisateur_ref": "TOM"}
             ]
         }
+
+        ``bacnet_templates`` et ``table_columns`` sont renvoyes (pull) en plus
+        d'etre acceptes en entree (push) ; ``template_usage`` et
+        ``bacnet_points_catalog`` sont push-only (jamais renvoyes).
 
         ``mobile_access`` liste les jetons d'acces mobile actuellement
         valides pour CE boitier (emis via
