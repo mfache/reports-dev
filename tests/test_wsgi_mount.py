@@ -44,6 +44,23 @@ def test_nombre_de_routes_ui_inchange(wsgi_app):
     # Passage a 38 suite a l ajout de /admin/utilisateurs/<id>/mobile-invite
     assert len(app_module.ui_app.routes) == 38
 
+
+def test_routes_ui_essentielles_presentes(wsgi_app):
+    """Le compte total ne suffit pas : une route peut disparaître puis être
+    remplacée par une autre au cours d'un futur découpage."""
+    import app as app_module
+
+    rules = {route.rule for route in app_module.ui_app.routes}
+    assert {
+        "/",
+        "/chantier/<chantier_id:int>",
+        "/chantier/<chantier_id:int>/boitiers",
+        "/chantier/<chantier_id:int>/chart-data",
+        "/nodes",
+        "/dev",
+        "/admin/chantiers",
+    } <= rules
+
 def test_dev_sync_db_route_repond(wsgi_app, base_path):
     status, _, body = call_wsgi(wsgi_app, f"{base_path}/dev/sync-db", method="POST")
     assert status == "200 OK"
