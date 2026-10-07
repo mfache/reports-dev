@@ -303,7 +303,7 @@ modification du code de production.
 
 - PID des processus `reports` (prod) strictement inchangés avant/après
   toute l'opération ; `/reports/api/usage` toujours `200` à la fin.
-- `/reports-dev/` redirige vers l'authentification Google comme
+- `/reports-dev/` redirige vers l'authentification  comme
   `/reports/` ; `/reports-dev/api/usage` répond sans authentification
   (même politique que la prod, destinée aux boîtiers de test) ;
   `/reports-dev/sw.js` exempté comme prévu.
@@ -434,7 +434,7 @@ Suppression de `test_api_mqtt.py` (script de debug de 2 lignes,
 
 ### Symptôme
 
-Après connexion Google réussie sur `/reports-dev/`, page blanche avec le
+Après connexion  réussie sur `/reports-dev/`, page blanche avec le
 seul texte « Utilisateur introuvable. »
 
 ### Cause
@@ -623,7 +623,7 @@ de prod vers les tables de dev ». Revient sur le choix initial
 (structure seule + utilisateur synthétique, §11 du cahier des charges)
 — justifié par le fait que `/reports-dev` et `/reports` partagent
 exactement le même périmètre d'accès (même authentification Google,
-même liste blanche d'e-mails dans `authorized_emails_google.txt`) :
+même liste blanche d'e-mails dans `authorized_emails_.txt`) :
 copier de vraies données n'élargit pas l'exposition par rapport à la
 production elle-même.
 
@@ -694,7 +694,7 @@ Portage du moteur de template de `rpinode` (rpi01) vers `reports`.
 - Ajout de l'onglet **Environnement** dans l'espace `/dev` pour inspecter les variables d'environnement du processus.
 
 ### Identification et Emails utilisateurs
-- Confirmation de la source de vérité pour l'accès OAuth2 : la liste blanche se trouve dans `/etc/oauth2-proxy/authorized_emails_google.txt` (vérifié : contient uniquement `marc@fache.be`).
+- Confirmation de la source de vérité pour l'accès OAuth2 : la liste blanche se trouve dans `/etc/oauth2-proxy/authorized_emails_.txt` (vérifié : contient uniquement `marc@fache.be`).
 - Création de la table `utilisateurs_emails` dans MariaDB (appliqué sur `dt` et `dt_dev`) :
     - Permet de lier plusieurs adresses email à un même utilisateur (support des alias).
     - Initialisée avec `marc@fache.be` lié à l'ID 1 (Marc Fache).
@@ -709,7 +709,7 @@ Portage du moteur de template de `rpinode` (rpi01) vers `reports`.
 ### Refonte graphique complète (Design System « Kinetic Infrastructure »)
 Portage de l'identité visuelle de `rpinode` (rpi01) vers le serveur central.
 - **Thème Sombre High-Tech** : Utilisation des variables de couleurs CSS de `rpi01` (fond #0e1416, accents Cyan LED #4cd7f6).
-- **Typographies & Iconographie** : Intégration des polices *Inter* (UI) et *JetBrains Mono* (Données) via Google Fonts, et des icônes *Material Symbols*.
+- **Typographies & Iconographie** : Intégration des polices *Inter* (UI) et *JetBrains Mono* (Données) via  Fonts, et des icônes *Material Symbols*.
 - **Architecture de Page** : Mise en place d'un layout standardisé avec Header fixe, Sidebar de navigation et zone de contenu principale par-dessus un dégradé radial subtil.
 - **Composants Réutilisables** : Mise à jour de tous les templates pour utiliser les classes standard : `card`, `data-table`, `stats-banner`, `btn-primary`.
 - **Graphiques Unifiés** : Adaptation de Chart.js pour correspondre au thème sombre (axes, grilles, tooltips et palettes de couleurs luminescentes).

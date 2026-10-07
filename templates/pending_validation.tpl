@@ -6,11 +6,11 @@
     <div class="card luminescent-border" style="max-width: 500px; padding: 40px; margin-top: 20px;">
         <p style="font-size: 1.1rem; line-height: 1.6; margin-bottom: 30px;">
             Bonjour <strong class="text-primary">{{current_user['nom']}}</strong>,<br><br>
-            Votre compte a été créé suite à votre authentification Google. 
+            Votre compte a été créé suite à votre authentification.
             Cependant, un <strong>administrateur</strong> doit valider votre rôle (CA ou Admin) avant de libérer l'accès aux données.
         </p>
         <div style="padding-top: 20px; border-top: 1px solid var(--outline-variant); color: var(--on-surface-variant); font-size: 0.85rem;">
-            Veuillez contacter <strong>Marc Fache</strong> pour l'activation.
+            Veuillez contacter <strong>Marc Fache ou François Dumortier</strong> pour l'activation.
         </div>
     </div>
 </div>
