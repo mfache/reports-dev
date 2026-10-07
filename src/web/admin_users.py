@@ -29,14 +29,31 @@ _PENDING_INVITE_LOCK = threading.Lock()
 _PENDING_INVITE_TTL = datetime.timedelta(minutes=15)
 
 
-def _store_pending_invite_copy(dest, body):
+def _build_mailto_url(dest, subject, body):
+    """Lien mailto: pour ouvrir un brouillon pre-rempli dans le client mail
+    par defaut (Outlook de preference ici), en repli quand l'envoi SMTP
+    echoue (cf. investigation authentification Office 365, 2026-09-19).
+    RFC 6068 : CRLF pour les sauts de ligne du corps."""
+    return (
+        f"mailto:{quote(dest, safe='@')}"
+        f"?subject={quote(subject, safe='')}"
+        f"&body={quote(body.replace(chr(10), chr(13) + chr(10)), safe='')}"
+    )
+
+
+def _store_pending_invite_copy(dest, subject, body):
     token = secrets.token_urlsafe(16)
     now = datetime.datetime.now()
     with _PENDING_INVITE_LOCK:
         # Purge des entrees expirees au passage.
         for key in [k for k, v in _PENDING_INVITE_COPIES.items() if now - v["created_at"] > _PENDING_INVITE_TTL]:
             del _PENDING_INVITE_COPIES[key]
-        _PENDING_INVITE_COPIES[token] = {"dest": dest, "body": body, "created_at": now}
+        _PENDING_INVITE_COPIES[token] = {
+            "dest": dest,
+            "body": body,
+            "mailto_url": _build_mailto_url(dest, subject, body),
+            "created_at": now,
+        }
     return token
 
 
@@ -77,15 +94,17 @@ def admin_users_list():
     invite_error = request.query.get('invite_error')
     invite_copy_dest = None
     invite_copy_body = None
+    invite_mailto_url = None
     pending = _pop_pending_invite_copy(request.query.get('invite_copy_token'))
     if pending:
         invite_copy_dest = pending["dest"]
         invite_copy_body = pending["body"]
+        invite_mailto_url = pending["mailto_url"]
     return view(
         'admin_users', title="Gestion Utilisateurs", users=active_users,
         archived_users=archived_users, invite_status=invite_status,
         invite_error=invite_error, invite_copy_dest=invite_copy_dest,
-        invite_copy_body=invite_copy_body,
+        invite_copy_body=invite_copy_body, invite_mailto_url=invite_mailto_url,
     )
 
 
@@ -268,17 +287,19 @@ def admin_users_mobile_invite(user_id):
         "-- Deltathermic"
     )
 
+    subject = "Accès à l'application mobile rpinode"
     try:
-        send_email(destinataire, "Accès à l'application mobile rpinode", corps)
+        send_email(destinataire, subject, corps)
     except (EmailConfigError, EmailSendError) as exc:
         # Repli en attendant que l'envoi SMTP fonctionne (cf. investigation
         # authentification Office 365, 2026-09-19) : la cle est deja creee
-        # et valide, on permet a l'admin de copier/coller le contenu pour
-        # le transmettre manuellement (autre canal) plutot que de bloquer.
+        # et valide, on permet a l'admin d'ouvrir un brouillon pre-rempli
+        # dans son client mail (mailto:, typiquement Outlook) ou de
+        # copier/coller le contenu pour le transmettre manuellement.
         # Le contenu est garde cote serveur (voir _store_pending_invite_copy)
         # et pas dans l'URL, qui deviendrait trop longue et causerait un
         # 502 (limite de taille d'en-tete entre nginx et uwsgi).
-        token = _store_pending_invite_copy(destinataire, corps)
+        token = _store_pending_invite_copy(destinataire, subject, corps)
         params = (
             "invite_error=" + quote(f"Cle creee mais envoi email echoue : {str(exc)[:150]}")
             + "&invite_copy_token=" + token

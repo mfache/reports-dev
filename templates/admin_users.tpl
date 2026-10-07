@@ -35,6 +35,11 @@
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
             <button type="button" class="btn-secondary" onclick="closeModal('modal-copy-invite')">Fermer</button>
             <button type="button" class="btn-primary" onclick="copyInviteText()">Copier</button>
+            % if invite_mailto_url:
+            <a class="btn-primary" href="{{invite_mailto_url}}" target="_blank" rel="noopener">
+                <span class="material-symbols-outlined icon-sm">mail</span> Ouvrir dans Outlook
+            </a>
+            % end
         </div>
     </div>
 </div>
