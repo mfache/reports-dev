@@ -10,7 +10,7 @@
             Cependant, un <strong>administrateur</strong> doit valider votre rôle (CA ou Admin) avant de libérer l'accès aux données.
         </p>
         <div style="padding-top: 20px; border-top: 1px solid var(--outline-variant); color: var(--on-surface-variant); font-size: 0.85rem;">
-            Veuillez contacter <strong>Marc Fache ou François Dumortier</strong> pour l'activation.
+            Veuillez contacter <strong>Marc Fache</strong> ou <strong>François Dumortier</strong> pour l'activation.
         </div>
     </div>
 </div>
