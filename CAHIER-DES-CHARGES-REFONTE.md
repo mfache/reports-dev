@@ -440,8 +440,7 @@ flowchart TD
    `auth_request`, même leçon que l'incident PWA du 10 septembre), et la
    route SSE `location ~ ^/reports-dev/reports_sse$`, toutes pointées vers
    `unix:/tmp/uwsgi.reports-dev.socket` et protégées par le même
-   `auth_request /oauth2-google/auth` que la prod (même liste blanche
-   d'e-mails). Le scope du Service Worker étant basé sur le chemin, une
+   `auth_request /oauth2/auth` (Azure AD / Entra ID) que la prod. Le scope du Service Worker étant basé sur le chemin, une
    PWA installée sur `/reports-dev/` ne peut pas entrer en conflit avec
    celle installée sur `/reports/`.
 5. **Garde-fou visuel.** Bandeau dans `layout.tpl`, conditionné à

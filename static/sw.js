@@ -13,7 +13,7 @@ self.addEventListener('fetch', (event) => {
     
     // NE PAS intercepter les flux d'authentification OAuth2 ni le callback
     // Cela évite les erreurs 403 CSRF dues à des requêtes concurrentes en tâche de fond.
-    if (url.pathname.includes('/oauth2-google/') || url.pathname.includes('callback')) {
+    if (url.pathname.includes('/oauth2/') || url.pathname.includes('callback')) {
         return;
     }
 
