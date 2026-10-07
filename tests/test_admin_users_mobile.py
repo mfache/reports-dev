@@ -90,15 +90,13 @@ def test_admin_users_mobile_invite_avec_flag_et_email(wsgi_app, base_path):
             f"{base_path}/admin/utilisateurs/{user_id}/mobile-invite",
             method="POST",
         )
-        # Selon la disponibilite du relais SMTP au moment du test, soit
-        # l'envoi reussit (invite=ok), soit il echoue proprement avec un
-        # contenu a copier manuellement (jeton invite_copy_token, le corps
-        # complet est garde cote serveur et jamais mis dans l'URL pour
-        # eviter un 502 lie a une query string trop longue) -- dans les
-        # deux cas, jamais d'erreur 500 et toujours une cle generee.
+        # Plus de tentative d'envoi SMTP (voir admin_users.py) : la cle est
+        # toujours transmise via un jeton invite_copy_token (le corps complet
+        # est garde cote serveur et jamais mis dans l'URL, pour eviter un 502
+        # lie a une query string trop longue).
         assert status in ["302 Found", "303 See Other"]
         location = headers.get("Location", "")
-        assert "invite=ok" in location or "invite_copy_token" in location
+        assert "invite_copy_token" in location
 
         from core.database import get_db
         db = get_db()

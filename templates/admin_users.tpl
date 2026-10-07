@@ -8,38 +8,32 @@
     </button>
 </div>
 
-% if invite_status == 'ok':
-<div class="card" style="border-color: var(--success, #2e7d32); margin-bottom: 15px;">
-    ✅ Invitation envoyée avec succès.
-</div>
-% end
 % if invite_error:
 <div class="card" style="border-color: var(--error); margin-bottom: 15px;">
     ❌ {{invite_error}}
-    % if invite_copy_body:
-    <div style="margin-top: 10px;">
-        <button class="btn-secondary" onclick="openModal('modal-copy-invite')">
-            <span class="material-symbols-outlined icon-sm">content_copy</span> Copier le contenu de l'invitation
-        </button>
-    </div>
-    % end
 </div>
 % end
 
 % if invite_copy_body:
-<div id="modal-copy-invite" class="modal" style="display:flex;">
+<div class="card" style="border-color: var(--success, #2e7d32); margin-bottom: 15px;">
+    ✅ Clé d'activation créée pour <strong>{{invite_copy_dest}}</strong>. L'envoi se fait manuellement, via votre client mail.
+    <div style="margin-top: 10px; display: flex; gap: 10px;">
+        <a class="btn-primary" href="{{invite_mailto_url}}" target="_blank" rel="noopener">
+            <span class="material-symbols-outlined icon-sm">mail</span> Ouvrir dans Outlook
+        </a>
+        <button class="btn-secondary" onclick="openModal('modal-copy-invite')">
+            <span class="material-symbols-outlined icon-sm">content_copy</span> Copier le texte
+        </button>
+    </div>
+</div>
+<div id="modal-copy-invite" class="modal">
     <div class="modal-content" style="max-width: 600px;">
-        <h3>Contenu de l'invitation (envoi email indisponible)</h3>
-        <p class="hint">L'envoi automatique par email a echoue. Copiez ce texte et transmettez-le manuellement (autre canal) au destinataire : <strong>{{invite_copy_dest}}</strong>.</p>
+        <h3>Contenu de l'invitation</h3>
+        <p class="hint">Destinataire : <strong>{{invite_copy_dest}}</strong>.</p>
         <textarea id="invite-copy-text" class="input-dark" style="width:100%; height:220px; font-family: monospace;" readonly>{{invite_copy_body}}</textarea>
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
             <button type="button" class="btn-secondary" onclick="closeModal('modal-copy-invite')">Fermer</button>
             <button type="button" class="btn-primary" onclick="copyInviteText()">Copier</button>
-            % if invite_mailto_url:
-            <a class="btn-primary" href="{{invite_mailto_url}}" target="_blank" rel="noopener">
-                <span class="material-symbols-outlined icon-sm">mail</span> Ouvrir dans Outlook
-            </a>
-            % end
         </div>
     </div>
 </div>

@@ -8,7 +8,6 @@ from web.ui import ui_app, BASE_PATH, view
 from web.templating import get_current_user, get_real_user
 from core.database import get_db
 from services.fleet import hash_token
-from services.email_sender import send_email, EmailConfigError, EmailSendError
 from core.config import _ENV
 
 def is_admin(user):
@@ -16,14 +15,17 @@ def is_admin(user):
 
 MOBILE_INVITE_EXPIRY = datetime.timedelta(hours=48)
 
-# Repli quand l'envoi SMTP echoue (cf. investigation authentification
-# Office 365, 2026-09-19) : le contenu de l'invitation est garde en
-# memoire cote serveur (jamais dans l'URL de redirection, sinon la
-# query string devient trop longue et provoque un 502 entre nginx et
-# uwsgi) et recupere une seule fois via un jeton court passe en
-# parametre. Un seul worker uwsgi tourne pour cette app (voir .ini,
-# pas de "processes"), donc un simple dict en memoire protege par un
-# verrou suffit.
+# L'envoi SMTP (Office 365) a ete abandonne : authentification "legacy"
+# rejetee cote tenant Microsoft 365 (535 5.7.3, cf. investigation du
+# 2026-09-19, reconfirme le 2026-10-07), hors de portee depuis ce
+# serveur. L'invitation est donc systematiquement transmise via un lien
+# mailto: pre-rempli (ouverture du client mail par defaut, typiquement
+# Outlook). Le contenu est garde en memoire cote serveur (jamais dans
+# l'URL de redirection, sinon la query string devient trop longue et
+# provoque un 502 entre nginx et uwsgi) et recupere une seule fois via
+# un jeton court passe en parametre. Un seul worker uwsgi tourne pour
+# cette app (voir .ini, pas de "processes"), donc un simple dict en
+# memoire protege par un verrou suffit.
 _PENDING_INVITE_COPIES = {}
 _PENDING_INVITE_LOCK = threading.Lock()
 _PENDING_INVITE_TTL = datetime.timedelta(minutes=15)
@@ -288,26 +290,8 @@ def admin_users_mobile_invite(user_id):
     )
 
     subject = "Accès à l'application mobile rpinode"
-    try:
-        send_email(destinataire, subject, corps)
-    except (EmailConfigError, EmailSendError) as exc:
-        # Repli en attendant que l'envoi SMTP fonctionne (cf. investigation
-        # authentification Office 365, 2026-09-19) : la cle est deja creee
-        # et valide, on permet a l'admin d'ouvrir un brouillon pre-rempli
-        # dans son client mail (mailto:, typiquement Outlook) ou de
-        # copier/coller le contenu pour le transmettre manuellement.
-        # Le contenu est garde cote serveur (voir _store_pending_invite_copy)
-        # et pas dans l'URL, qui deviendrait trop longue et causerait un
-        # 502 (limite de taille d'en-tete entre nginx et uwsgi).
-        token = _store_pending_invite_copy(destinataire, subject, corps)
-        params = (
-            "invite_error=" + quote(f"Cle creee mais envoi email echoue : {str(exc)[:150]}")
-            + "&invite_copy_token=" + token
-        )
-        redirect(f"{BASE_PATH}/admin/utilisateurs?{params}")
-        return
-
-    redirect(f"{BASE_PATH}/admin/utilisateurs?invite=ok")
+    token = _store_pending_invite_copy(destinataire, subject, corps)
+    redirect(f"{BASE_PATH}/admin/utilisateurs?invite_copy_token={token}")
 
 
 @ui_app.get("/admin/chantiers-users")
