@@ -128,7 +128,7 @@
                 </div>
 
                 <div class="header-actions">
-                    <a href="/oauth2/sign_out?rd={{BASE_PATH}}/" class="btn-icon btn-icon-danger" title="Déconnexion" hx-boost="false">
+                    <a href="{{LOGOUT_URL}}" class="btn-icon btn-icon-danger" title="Déconnexion" hx-boost="false">
                         <span class="material-symbols-outlined">power_settings_new</span>
                     </a>
                 </div>

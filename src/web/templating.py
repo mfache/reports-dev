@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import bottle
 import hashlib
-from core.config import BASE_PATH
+from core.config import BASE_PATH, build_logout_url
 from core.database import get_db
 
 class TemplateEngine:
@@ -144,6 +144,7 @@ class TemplateEngine:
                     "real_user": real_user,
                     "all_users": all_users,
                     "BASE_PATH": self.base_path,
+                    "LOGOUT_URL": build_logout_url(),
                     "request_path": bottle.request.path,
                     "client": client_info
                 }

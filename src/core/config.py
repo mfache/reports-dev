@@ -13,10 +13,37 @@ conserve donc le comportement historique).
 from __future__ import annotations
 
 import os
+from urllib.parse import quote
 
 DB_ENV_FILE = os.environ.get("DB_ENV_FILE", "/etc/boitier-fleet/db.env")
 
 BASE_PATH = os.environ.get("REPORTS_BASE_PATH", "/reports")
+
+# Domaine public et tenant Azure AD/Entra ID, pour construire l'URL de
+# deconnexion complete (voir build_logout_url ci-dessous). Meme domaine
+# que celui deja code en dur dans services/headscale.py.
+APP_DOMAIN = "https://docs.deltathermic.be"
+AZURE_TENANT_ID = "6f5a8612-d079-4c00-89fd-3df64e4a55b1"
+
+
+def build_logout_url() -> str:
+    """URL du bouton "Deconnexion" : purge d'abord le cookie oauth2-proxy
+    local (`/oauth2/sign_out`), puis redirige vers le endpoint de
+    deconnexion Azure AD (`end_session_endpoint`) pour fermer aussi la
+    session SSO cote Microsoft. Sans ce 2e saut, revenir sur l'app
+    reconnecte silencieusement via le SSO toujours actif (constate le
+    7 octobre : "Deconnexion" ramenait a l'accueil deja authentifie).
+
+    Necessite `whitelist_domains = [ "login.microsoftonline.com" ]` dans
+    `/etc/oauth2-proxy/oauth2-proxy.cfg` (sinon oauth2-proxy ignore le
+    `rd` externe et retombe sur "/").
+    """
+    post_logout_redirect_uri = f"{APP_DOMAIN}{BASE_PATH}/"
+    azure_logout_url = (
+        f"https://login.microsoftonline.com/{AZURE_TENANT_ID}/oauth2/v2.0/logout"
+        f"?post_logout_redirect_uri={quote(post_logout_redirect_uri, safe='')}"
+    )
+    return f"/oauth2/sign_out?rd={quote(azure_logout_url, safe='')}"
 
 
 def _read_env(path: str) -> dict:
