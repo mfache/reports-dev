@@ -7,7 +7,7 @@ Ce fichier documente l'architecture locale des dossiers et la marche à suivre p
 Lors de l'utilisation et du développement sur ce serveur, nous avons découvert que le code est scindé en deux concepts :
 
 1. **Le bac à sable de développement (`/opt/reports-dev`)** : 
-   C'est le dossier dans lequel nous travaillons activement, modifions les fichiers et testons les changements via l'application uWSGI locale (`reports-dev`). **Ce dossier n'est pas directement relié au dépôt Git distant** (aucun `remote` n'est configuré).
+   C'est le dossier dans lequel nous travaillons activement, modifions les fichiers et testons les changements via l'application uWSGI locale (`reports-dev`). Il possède un `remote` (`origin` → `git@github-reports-dev:mfache/reports-dev.git`), mais ce dépôt n'est **pas** la référence : le code officiel est versionné dans `docs-infra` (voir ci-dessous).
    
 2. **Le dépôt Git officiel (`/opt/docs-infra`)** :
    C'est ici que se trouve le véritable dépôt Git (`origin` pointe vers `git@github-reports:mfache/docs-infra.git`). Le code de notre application `reports` est versionné dans le sous-dossier `/opt/docs-infra/var/www/reports`.
@@ -19,7 +19,7 @@ Puisque nous développons dans `/opt/reports-dev`, il faut synchroniser notre tr
 Voici la procédure exacte (commandes à copier-coller) :
 
 ### 1. Commiter localement dans le bac à sable (Optionnel mais recommandé)
-Même si ce dossier n'est pas relié à GitHub, il possède son propre dépôt Git local pour tracer votre historique de travail.
+Ce dépôt local trace l'historique de travail du bac à sable. Un commit ici ne publie rien dans le dépôt officiel, et son `origin` (`mfache/reports-dev`) n'est pas mis à jour automatiquement.
 
 ```bash
 git add .
@@ -50,4 +50,4 @@ git -C /opt/docs-infra push
 ```
 
 ---
-*Note: Ne jamais faire de `git push` directement depuis `/opt/reports-dev`, cela échouera car le dépôt distant officiel est géré par l'infrastructure globale dans `docs-infra`.*
+*Note : un `git push` depuis `/opt/reports-dev` envoie uniquement vers `mfache/reports-dev`, pas vers le dépôt officiel. Pour publier le code de `reports`, il faut toujours passer par `docs-infra` (étapes 2 à 4).*
