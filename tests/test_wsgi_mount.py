@@ -42,7 +42,8 @@ def test_nombre_de_routes_ui_inchange(wsgi_app):
     # Passage a 36 suite a l'ajout de /chantier/<id>/boitiers (chargement différé des boîtiers).
     # Passage a 37 suite a l'ajout de /chantier/<id>/live-view
     # Passage a 38 suite a l ajout de /admin/utilisateurs/<id>/mobile-invite
-    assert len(app_module.ui_app.routes) == 38
+    # Passage a 40 le 25/10/2026 : /rpi (choix d un boitier) et /rpi/authz (controle nginx)
+    assert len(app_module.ui_app.routes) == 40
 
 
 def test_routes_ui_essentielles_presentes(wsgi_app):

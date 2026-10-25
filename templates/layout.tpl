@@ -146,6 +146,12 @@
                         <span>Accueil</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{{BASE_PATH}}/rpi" class="nav-item {{'active' if request_path.startswith(BASE_PATH + '/rpi') else ''}}">
+                        <span class="material-symbols-outlined">lan</span>
+                        <span>Ouvrir un boîtier</span>
+                    </a>
+                </li>
                 % end
 
                 % if current_user.get('is_ca') or current_user.get('is_admin'):
