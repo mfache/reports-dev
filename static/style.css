@@ -927,7 +927,7 @@ select option {
 
     .sidebar {
         position: fixed;
-        top: 64px;
+        top: var(--hauteur-entete, 64px);
         left: 0;
         bottom: 0;
         z-index: 1050;
@@ -945,6 +945,24 @@ select option {
 
     .header-content {
         padding: 10px 16px;
+        height: auto;
+        min-height: 56px;
+        gap: 8px;
+    }
+
+    .header-left {
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .header-divider,
+    .host-telemetry {
+        display: none;
+    }
+
+    .menu-toggle {
+        align-items: center;
+        justify-content: center;
     }
 
     .user-badge {
@@ -963,11 +981,21 @@ select option {
 }
 
 @media (max-width: 480px) {
+    /* Une seule ligne depuis l'ajout du bouton menu : le titre se raccourcit. */
     .header-content {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         height: auto;
-        row-gap: 8px;
         padding: 8px 12px;
+    }
+
+    .host-info {
+        min-width: 0;
+    }
+
+    .host-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .header-left {
@@ -992,12 +1020,7 @@ select option {
     }
 
     .header-right {
-        width: 100%;
-        justify-content: flex-end;
+        flex-shrink: 0;
         gap: 10px;
-    }
-
-    .sidebar {
-        top: 92px;
     }
 }

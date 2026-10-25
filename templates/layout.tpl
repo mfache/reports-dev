@@ -81,6 +81,10 @@
     <header class="app-header">
         <div class="header-content">
             <div class="header-left">
+                <button type="button" class="menu-toggle" id="menu-toggle" aria-label="Menu"
+                        aria-controls="sidebar" aria-expanded="false" onclick="basculerMenu()">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
                 <a href="{{BASE_PATH}}/" class="brand-link">
                     <img src="{{BASE_PATH}}/static/DELTA-Thermic-v3_reverse.png" alt="Deltathermic" class="brand-logo">
                 </a>
@@ -137,7 +141,7 @@
     </header>
 
     <div class="app-container">
-        <nav class="sidebar">
+        <nav class="sidebar" id="sidebar">
             <ul class="nav-list">
                 % if not current_user.get('is_wait'):
                 <li>
@@ -212,6 +216,35 @@
     </div>
 
     <script>
+      // Menu latéral sur petit écran (le CSS le cache sous 900 px, voir
+      // style.css « Mobile Adaptivity ») : ouverture par le bouton ☰, fermeture
+      // au choix d'un lien (navigation hx-boost : la page ne se recharge pas),
+      // au clic en dehors ou avec Échap.
+      function basculerMenu(ouvrir) {
+          const menu = document.getElementById('sidebar');
+          const bouton = document.getElementById('menu-toggle');
+          if (!menu || !bouton) return;
+          const ouvert = ouvrir === undefined ? !menu.classList.contains('open') : ouvrir;
+          menu.classList.toggle('open', ouvert);
+          bouton.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
+      }
+      // Le menu se cale sous l'en-tête, dont la hauteur varie sur mobile.
+      function caleMenuSousEntete() {
+          const entete = document.querySelector('.app-header');
+          if (entete) document.documentElement.style.setProperty('--hauteur-entete', entete.offsetHeight + 'px');
+      }
+      document.addEventListener('DOMContentLoaded', () => {
+          caleMenuSousEntete();
+          window.addEventListener('resize', caleMenuSousEntete);
+          document.getElementById('sidebar')?.addEventListener('click', (e) => {
+              if (e.target.closest('a')) basculerMenu(false);
+          });
+          document.addEventListener('click', (e) => {
+              if (!e.target.closest('#sidebar, #menu-toggle')) basculerMenu(false);
+          });
+          document.addEventListener('keydown', (e) => { if (e.key === 'Escape') basculerMenu(false); });
+      });
+
       // Service Worker (PWA)
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
