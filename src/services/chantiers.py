@@ -129,6 +129,12 @@ def _find_chantiers_by_antenna(cur, mcc, mnc, enodeb):
 def _resolve_or_create_chantier(cur, boitier_id, current_chantier_id, cell, site_hint_name):
     normalized = _normalize_cell(cell)
     if not normalized:
+        # Sans antenne (boîtier sans 4G, relié par le WiFi ou le filaire du
+        # chantier) : on se fie au chantier annoncé par le boîtier s'il existe
+        # déjà et n'est pas provisoire. Aucune création ni rattachement d'antenne.
+        ref_hint = (site_hint_name or "").strip()[:45]
+        if ref_hint and not _is_provisional_ref(ref_hint):
+            return _fetch_chantier_by_ref(cur, ref_hint)
         return None
 
     _ensure_chantier_antennes_schema()
