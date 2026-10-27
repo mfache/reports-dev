@@ -26,7 +26,7 @@
 % else:
 <table class="data-table">
     <thead>
-        <tr><th>Boîtier</th><th>Chantier</th><th>État</th><th></th></tr>
+        <tr><th>Boîtier</th><th>Chantier</th><th>État</th><th></th><th>Raccourcis</th></tr>
     </thead>
     <tbody>
     % for b in boitiers:
@@ -47,8 +47,18 @@
                 <span class="hint">Non joignable</span>
                 % end
             </td>
+            <td>
+                % for r in b['raccourcis']:
+                <a href="{{r['url']}}" hx-boost="false" target="_blank" rel="noopener" title="{{r['url']}}">{{r['libelle']}}</a><br>
+                % end
+                % if not b['raccourcis']:
+                <span class="hint">—</span>
+                % end
+            </td>
         </tr>
     % end
     </tbody>
 </table>
+<p class="hint">Les raccourcis (GTC, automates…) s'ouvrent depuis un poste équipé de Tailscale.
+Ils se définissent sur le boîtier, menu Réseau &gt; Raccourcis.</p>
 % end

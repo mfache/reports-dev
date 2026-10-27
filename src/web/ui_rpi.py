@@ -13,6 +13,7 @@ from core.database import get_db
 from services.acces_boitiers import (HOSTNAME_VALIDE, a_acces_aux_boitiers,
                                      boitiers_autorises, email_session_oauth2,
                                      ips_tailscale, utilisateur_par_email)
+from services.raccourcis import raccourcis_par_chantier
 from web.templating import engine, view
 from web.ui import ui_app
 
@@ -37,6 +38,7 @@ def rpi_boitiers():
             )
             fiche = cur.fetchone()
             boitiers = boitiers_autorises(cur, fiche)
+            raccourcis = raccourcis_par_chantier(cur, [b["chantier_id"] for b in boitiers])
     finally:
         db.close()
 
@@ -46,6 +48,7 @@ def rpi_boitiers():
         b["en_ligne"] = bool(b["last_sync_at"] and maintenant - b["last_sync_at"] <= EN_LIGNE)
         b["joignable"] = b["hostname"] in ips
         b["url"] = f"{RPI_PROXY_PATH}/{b['hostname']}/"
+        b["raccourcis"] = raccourcis.get(b["chantier_id"], [])
 
     return view("rpi_boitiers", title="Boîtiers - Deltathermic", boitiers=boitiers,
                 autorise=a_acces_aux_boitiers(fiche),

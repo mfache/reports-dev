@@ -15,6 +15,7 @@ from web.api import api_app
 from web.responses import json_error, json_ok
 from services.fleet import authenticate_boitier, log_write, notify_fleet_change
 from services.chantiers import _resolve_or_create_chantier
+from services.raccourcis import push_raccourcis
 
 def _push_net_profiles(cur, boitier_id, chantier_id, hostname, profiles):
     cur.execute("DELETE FROM boitier_net_profiles WHERE chantier_id=%s AND updated_by=%s", (chantier_id, hostname[:64]))
@@ -444,6 +445,7 @@ def sync():
                 ("table_columns", _push_table_columns, [cur, boitier_id]),
                 ("bacnet_points_catalog", _push_bacnet_points_catalog, [cur, boitier_id, boitier["hostname"]]),
                 ("bacnet_templates", _push_bacnet_templates, [cur, boitier_id, boitier["hostname"]]),
+                ("shortcuts", push_raccourcis, [cur, boitier_id, chantier_id, boitier["hostname"]]),
             ]
 
             for key, func, args in handlers:
